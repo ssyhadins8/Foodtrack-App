@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:foodtrack/theme/app_colors.dart';
 import 'package:foodtrack/theme/premium_background.dart';
+import 'package:intl/intl.dart';
 
 class ProfilPedagangPage extends StatefulWidget {
   final String namaKantin;
@@ -248,6 +249,13 @@ class _ProfilPedagangPageState extends State<ProfilPedagangPage> {
               child: Column(
                 children: [
                   _PTile(
+                    icon: Icons.star_rate_rounded,
+                    color: Colors.amber,
+                    label: 'Ulasan Pembeli',
+                    onTap: () => _showUlasanPembeli(context),
+                  ),
+                  _divider(),
+                  _PTile(
                     icon: Icons.lock_outline_rounded,
                     color: const Color(0xFF9C27B0),
                     label: 'Ubah Password',
@@ -291,6 +299,131 @@ class _ProfilPedagangPageState extends State<ProfilPedagangPage> {
     indent: 56,
     endIndent: 16,
   );
+
+  void _showUlasanPembeli(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Ulasan Pembeli',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Divider(height: 24),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('ulasan')
+                      .where('kantinId', isEqualTo: widget.kantinId)
+                      .snapshots(),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+                    }
+                    final docs = snap.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            const Text('Belum ada ulasan', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                          ],
+                        ),
+                      );
+                    }
+                    final sortedDocs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(docs);
+                    sortedDocs.sort((a, b) {
+                      final ta = a.data()['timestamp'] as Timestamp?;
+                      final tb = b.data()['timestamp'] as Timestamp?;
+                      if (ta == null || tb == null) return 0;
+                      return tb.compareTo(ta);
+                    });
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      itemCount: sortedDocs.length,
+                      separatorBuilder: (_, __) => const Divider(height: 20),
+                      itemBuilder: (context, index) {
+                        final data = sortedDocs[index].data();
+                        final rating = (data['rating'] as num?)?.toDouble() ?? 5.0;
+                        final nama = data['namaPembeli'] ?? 'Pembeli';
+                        final komentar = data['komentar'] ?? '';
+                        final ts = data['timestamp'] as Timestamp?;
+                        final dateStr = ts != null 
+                            ? DateFormat('dd MMM yyyy').format(ts.toDate())
+                            : '';
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  nama,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                Text(
+                                  dateStr,
+                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: List.generate(5, (starIdx) {
+                                return Icon(
+                                  starIdx < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                                  color: Colors.amber,
+                                  size: 14,
+                                );
+                              }),
+                            ),
+                            if (komentar.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                komentar,
+                                style: TextStyle(color: Colors.grey.shade700, fontSize: 12, height: 1.4),
+                              ),
+                            ],
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   void _ubahPassword(BuildContext context) {
     final ctrl = TextEditingController();

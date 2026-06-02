@@ -171,7 +171,7 @@ class _LogInState extends State<LogIn> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Ganti Password',
+                    'Lupa Password',
                     style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -179,7 +179,7 @@ class _LogInState extends State<LogIn> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Masukkan email akun Anda. Link untuk mengganti password akan dikirim ke email tersebut.',
+                    'Masukkan email akun Anda. Link untuk mereset password akan dikirim ke email tersebut.',
                     style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 13,
@@ -191,7 +191,7 @@ class _LogInState extends State<LogIn> {
                     keyboardType: TextInputType.emailAddress,
                     style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: 'Email / NIM',
+                      hintText: 'Email Anda',
                       prefixIcon:
                           const Icon(Icons.email_outlined, color: AppColors.primary),
                       filled: true,
@@ -204,38 +204,6 @@ class _LogInState extends State<LogIn> {
                         borderRadius: BorderRadius.circular(16),
                         borderSide:
                             const BorderSide(color: AppColors.primary, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    obscureText: true,
-                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Password Baru',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded,
-                          color: AppColors.primary),
-                      filled: true,
-                      fillColor: AppColors.cyanLight,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    obscureText: true,
-                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Konfirmasi Password',
-                      prefixIcon: const Icon(Icons.lock_reset_rounded,
-                          color: AppColors.primary),
-                      filled: true,
-                      fillColor: AppColors.cyanLight,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
@@ -271,7 +239,7 @@ class _LogInState extends State<LogIn> {
                                   .sendPasswordResetEmail(email: email);
                               if (!mounted) return;
                               Navigator.pop(context);
-                              _snack('Instruksi ganti password telah dikirim ke email Anda!',
+                              _snack('Link reset password telah dikirim ke email Anda!',
                                   error: false);
                             } catch (e) {
                               _snack('Gagal mengirim email: $e');

@@ -335,7 +335,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 16),
                   _promoStep('1', 'Berlaku hanya untuk menu Soto Ayam di Kantin Bu Sari.'),
                   _promoStep('2', 'Minimal pembelian Rp 20.000.'),
-                  _promoStep('3', 'Promo berlaku hingga 31 Mei 2026.'),
+                  _promoStep('3', 'Promo berlaku hingga 30 Juni 2026.'),
                   _promoStep('4', 'Tidak dapat digabungkan dengan promo lain.'),
                   const SizedBox(height: 24),
                   SizedBox(

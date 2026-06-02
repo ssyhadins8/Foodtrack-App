@@ -3469,6 +3469,131 @@ class CanteenManagementState extends State<CanteenManagement> {
     );
   }
 
+  void _showUlasanDialog(String kantinId, String kantinNama) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Ulasan Pembeli - $kantinNama',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Divider(height: 24),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('ulasan')
+                      .where('kantinId', isEqualTo: kantinId)
+                      .snapshots(),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+                    }
+                    final docs = snap.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            const Text('Belum ada ulasan', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                          ],
+                        ),
+                      );
+                    }
+                    final sortedDocs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(docs);
+                    sortedDocs.sort((a, b) {
+                      final ta = a.data()['timestamp'] as Timestamp?;
+                      final tb = b.data()['timestamp'] as Timestamp?;
+                      if (ta == null || tb == null) return 0;
+                      return tb.compareTo(ta);
+                    });
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      itemCount: sortedDocs.length,
+                      separatorBuilder: (_, __) => const Divider(height: 20),
+                      itemBuilder: (context, index) {
+                        final data = sortedDocs[index].data();
+                        final rating = (data['rating'] as num?)?.toDouble() ?? 5.0;
+                        final nama = data['namaPembeli'] ?? 'Pembeli';
+                        final komentar = data['komentar'] ?? '';
+                        final ts = data['timestamp'] as Timestamp?;
+                        final dateStr = ts != null 
+                            ? DateFormat('dd MMM yyyy').format(ts.toDate())
+                            : '';
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  nama,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                Text(
+                                  dateStr,
+                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: List.generate(5, (starIdx) {
+                                return Icon(
+                                  starIdx < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                                  color: Colors.amber,
+                                  size: 14,
+                                );
+                              }),
+                            ),
+                            if (komentar.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                komentar,
+                                style: TextStyle(color: Colors.grey.shade700, fontSize: 12, height: 1.4),
+                              ),
+                            ],
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -3646,6 +3771,11 @@ class CanteenManagementState extends State<CanteenManagement> {
                                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
                                 ),
                               ),
+                            IconButton(
+                              icon: const Icon(Icons.rate_review_outlined, color: Colors.amber),
+                              onPressed: () => _showUlasanDialog(id, data['nama'] ?? 'Kantin'),
+                              tooltip: 'Lihat Ulasan',
+                            ),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
                               onPressed: () => showForm(docId: id, existing: data),

@@ -109,11 +109,26 @@ class FirestoreService {
         }
       }
 
+      String kantinId = '';
+      try {
+        final kantinSnap = await _db
+            .collection('kantin')
+            .where('nama', isEqualTo: kantin)
+            .limit(1)
+            .get();
+        if (kantinSnap.docs.isNotEmpty) {
+          kantinId = kantinSnap.docs.first.id;
+        }
+      } catch (e) {
+        debugPrint('Error mapping kantin name to id: $e');
+      }
+
       final docRef = await _db.collection('pesanan').add({
         'uid': _uid,
         'pembeliNama': pembeliNama,
         'pembeliEmail': pembeliEmail,
         'kantin': kantin,
+        'kantinId': kantinId,
         'metode': metode,
         'catatan': catatan,
         'totalHarga': totalHarga,

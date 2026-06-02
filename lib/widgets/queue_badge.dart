@@ -1,28 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:foodtrack/services/queue_service.dart';
 
-class QueueBadge extends StatefulWidget {
+class QueueBadge extends StatelessWidget {
   final String kantinId;
 
   const QueueBadge({Key? key, required this.kantinId}) : super(key: key);
 
   @override
-  State<QueueBadge> createState() => _QueueBadgeState();
-}
-
-class _QueueBadgeState extends State<QueueBadge> {
-  late Stream<Map<String, dynamic>> _stream;
-
-  @override
-  void initState() {
-    super.initState();
-    _stream = QueueService.getQueueStatus(widget.kantinId);
-  }
-
-  @override
   Widget build(BuildContext context) {
     return StreamBuilder<Map<String, dynamic>>(
-      stream: _stream,
+      stream: QueueService.getQueueStatus(kantinId),
       builder: (context, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
 
@@ -56,11 +43,11 @@ class _QueueBadgeState extends State<QueueBadge> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           decoration: BoxDecoration(
-            color: bgColor.withOpacity(0.95),
+            color: bgColor.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, 1),
               ),
