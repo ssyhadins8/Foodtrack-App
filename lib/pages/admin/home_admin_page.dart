@@ -228,6 +228,13 @@ class _HomeAdminPageState extends State<HomeAdminPage> {
                       onTap: () => setState(() => _tabIdx = 2),
                       isCompact: isCompact,
                     ),
+                    _buildSidebarNavItem(
+                      icon: Icons.restaurant_menu_rounded,
+                      label: 'Kelola Menu Makanan',
+                      active: _tabIdx == 3,
+                      onTap: () => setState(() => _tabIdx = 3),
+                      isCompact: isCompact,
+                    ),
                     // New Voucher Management Nav Item
                     _buildSidebarNavItem(
                       icon: Icons.local_offer_rounded,
