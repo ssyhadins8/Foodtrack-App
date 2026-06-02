@@ -3956,66 +3956,128 @@ class MenuManagementState extends State<MenuManagement> {
                   ),
                   const SizedBox(height: 14),
 
-                  // KATEGORI & GAMBAR DROPDOWN ROW
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Kategori', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: selectedKat,
-                                  isExpanded: true,
-                                  items: _kategoriPreset.map((k) => DropdownMenuItem(value: k, child: Text(k))).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) setS(() => selectedKat = val);
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
+                  // KATEGORI DROPDOWN
+                  const Text('Kategori', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedKat,
+                        isExpanded: true,
+                        items: _kategoriPreset.map((k) => DropdownMenuItem(value: k, child: Text(k))).toList(),
+                        onChanged: (val) {
+                          if (val != null) setS(() => selectedKat = val);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // GAMBAR PREVIEW & SELECTOR
+                  const Text(
+                    'Gambar / Foto Menu',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.cyan.withOpacity(0.4), width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(
+                          selectedGambar,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.fastfood_rounded,
+                            color: AppColors.primary,
+                            size: 40,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Gambar Menu', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: selectedGambar,
-                                  isExpanded: true,
-                                  items: _gambarPreset.map((g) {
-                                    final label = g.split('/').last.split('.').first;
-                                    return DropdownMenuItem(value: g, child: Text(label.replaceAll('_', ' ')));
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) setS(() => selectedGambar = val);
-                                  },
-                                ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Pilih Gambar:',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    height: 70,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _gambarPreset.length,
+                      itemBuilder: (context, index) {
+                        final imgPath = _gambarPreset[index];
+                        final isSelected = selectedGambar == imgPath;
+                        return GestureDetector(
+                          onTap: () {
+                            setS(() {
+                              selectedGambar = imgPath;
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            width: 70,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                                width: isSelected ? 3 : 1,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.asset(
+                                    imgPath,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Positioned(
+                                    top: 2,
+                                    right: 2,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(1),
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check_rounded,
+                                        color: Colors.white,
+                                        size: 10,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(height: 14),
 
@@ -4073,8 +4135,8 @@ class MenuManagementState extends State<MenuManagement> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: () async {
-                            if (namaCtrl.text.trim().isEmpty || descCtrl.text.trim().isEmpty) {
-                              _msg('Nama dan Deskripsi wajib diisi!', isErr: true);
+                            if (namaCtrl.text.trim().isEmpty) {
+                              _msg('Nama menu wajib diisi!', isErr: true);
                               return;
                             }
                             if (selectedKantinId.isEmpty) {
