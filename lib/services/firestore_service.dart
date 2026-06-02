@@ -213,7 +213,6 @@ class FirestoreService {
     return _db
         .collection('pesanan')
         .where('uid', isEqualTo: _uid)
-        .orderBy('waktuPesan', descending: true)
         .snapshots();
   }
 
@@ -321,6 +320,19 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('tandaiDibaca error: $e');
+    }
+  }
+
+  static Future<void> tandaiSemuaDibaca(List<String> docIds) async {
+    if (docIds.isEmpty) return;
+    try {
+      final batch = _db.batch();
+      for (var id in docIds) {
+        batch.update(_db.collection('notifikasi').doc(id), {'dibaca': true});
+      }
+      await batch.commit();
+    } catch (e) {
+      debugPrint('tandaiSemuaDibaca error: $e');
     }
   }
 

@@ -521,12 +521,30 @@ class _PesananAktifSection extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('pesanan')
           .where('uid', isEqualTo: uid)
-          .where('statusIndex', isLessThan: 3)
-          .orderBy('statusIndex')
-          .orderBy('waktuPesan', descending: true)
           .snapshots(),
       builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
+        final rawDocs = snap.data?.docs ?? [];
+        final docs = rawDocs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final statusIndex = data['statusIndex'] as int? ?? 0;
+          return statusIndex < 3;
+        }).toList();
+
+        docs.sort((a, b) {
+          final dataA = a.data() as Map<String, dynamic>;
+          final dataB = b.data() as Map<String, dynamic>;
+          final statusA = dataA['statusIndex'] as int? ?? 0;
+          final statusB = dataB['statusIndex'] as int? ?? 0;
+          if (statusA != statusB) {
+            return statusA.compareTo(statusB);
+          }
+          final timeA = dataA['waktuPesan'] as Timestamp?;
+          final timeB = dataB['waktuPesan'] as Timestamp?;
+          if (timeA == null && timeB == null) return 0;
+          if (timeA == null) return 1;
+          if (timeB == null) return -1;
+          return timeB.compareTo(timeA);
+        });
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),

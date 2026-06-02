@@ -93,7 +93,6 @@ class RiwayatPesananPage extends StatelessWidget {
               stream: FirebaseFirestore.instance
                   .collection('pesanan')
                   .where('uid', isEqualTo: uid)
-                  .orderBy('waktuPesan', descending: true)
                   .snapshots(),
               builder: (ctx, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
@@ -101,7 +100,17 @@ class RiwayatPesananPage extends StatelessWidget {
                     child: CircularProgressIndicator(color: AppColors.primary),
                   );
                 }
-                final docs = snap.data?.docs ?? [];
+                final docs = (snap.data?.docs ?? []).toList();
+                docs.sort((a, b) {
+                  final dataA = a.data() as Map<String, dynamic>;
+                  final dataB = b.data() as Map<String, dynamic>;
+                  final timeA = dataA['waktuPesan'] as Timestamp?;
+                  final timeB = dataB['waktuPesan'] as Timestamp?;
+                  if (timeA == null && timeB == null) return 0;
+                  if (timeA == null) return 1;
+                  if (timeB == null) return -1;
+                  return timeB.compareTo(timeA);
+                });
                 if (docs.isEmpty) {
                   return Center(
                     child: Column(

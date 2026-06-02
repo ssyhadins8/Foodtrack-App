@@ -618,20 +618,22 @@ class StatusPesananPage extends StatelessWidget {
       BuildContext context, double initialRating, String kantinNama) {
     double selectedRating = initialRating;
     final TextEditingController komentarController = TextEditingController();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
+      builder: (sheetContext) {
+        bool isSubmitting = false;
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (modalContext, setModalState) {
             return Container(
-              padding: EdgeInsets.only(
+               padding: EdgeInsets.only(
                 top: 24,
                 left: 24,
                 right: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
               ),
               decoration: BoxDecoration(
                 color: const Color(0xFF0F172A).withOpacity(0.95),
@@ -673,11 +675,13 @@ class StatusPesananPage extends StatelessWidget {
                         final starValue = index + 1.0;
                         final active = starValue <= selectedRating;
                         return GestureDetector(
-                          onTap: () {
-                            setModalState(() {
-                              selectedRating = starValue;
-                            });
-                          },
+                          onTap: isSubmitting
+                              ? null
+                              : () {
+                                  setModalState(() {
+                                    selectedRating = starValue;
+                                  });
+                                },
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Icon(
@@ -702,6 +706,7 @@ class StatusPesananPage extends StatelessWidget {
                     TextField(
                       controller: komentarController,
                       maxLines: 3,
+                      enabled: !isSubmitting,
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                       decoration: InputDecoration(
                         hintText: 'Tulis komentar Anda di sini (opsional)...',
@@ -716,6 +721,10 @@ class StatusPesananPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           borderSide: const BorderSide(color: AppColors.cyan),
                         ),
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
+                        ),
                         contentPadding: const EdgeInsets.all(16),
                       ),
                     ),
@@ -724,7 +733,7 @@ class StatusPesananPage extends StatelessWidget {
                       children: [
                         Expanded(
                           child: TextButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: isSubmitting ? null : () => Navigator.pop(modalContext),
                             style: TextButton.styleFrom(
                               foregroundColor: Colors.white70,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -735,53 +744,50 @@ class StatusPesananPage extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () async {
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) => const Center(
-                                  child: CircularProgressIndicator(color: AppColors.primary),
-                                ),
-                              );
-
-                              try {
-                                await FirestoreService.tambahUlasan(
-                                  pesananId: docId,
-                                  kantinNama: kantinNama,
-                                  rating: selectedRating,
-                                  komentar: komentarController.text.trim(),
-                                );
-                                if (context.mounted) Navigator.pop(context);
-                                if (context.mounted) Navigator.pop(context);
-                                
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text('Ulasan berhasil dikirim! ⭐'),
-                                      backgroundColor: AppColors.success,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) Navigator.pop(context);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Gagal mengirim ulasan: $e'),
-                                      backgroundColor: AppColors.danger,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
-                            },
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    setModalState(() {
+                                      isSubmitting = true;
+                                    });
+                                    try {
+                                      await FirestoreService.tambahUlasan(
+                                        pesananId: docId,
+                                        kantinNama: kantinNama,
+                                        rating: selectedRating,
+                                        komentar: komentarController.text.trim(),
+                                      );
+                                      if (modalContext.mounted) {
+                                        Navigator.pop(modalContext);
+                                      }
+                                      scaffoldMessenger.showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Ulasan berhasil dikirim! ⭐'),
+                                          backgroundColor: AppColors.success,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      if (modalContext.mounted) {
+                                        setModalState(() {
+                                          isSubmitting = false;
+                                        });
+                                      }
+                                      scaffoldMessenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text('Gagal mengirim ulasan: $e'),
+                                          backgroundColor: AppColors.danger,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
@@ -790,10 +796,19 @@ class StatusPesananPage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            child: const Text(
-                              'Kirim Ulasan',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Kirim Ulasan',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
                           ),
                         ),
                       ],

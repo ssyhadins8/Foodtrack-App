@@ -875,6 +875,8 @@ class _QrisSimulationDialogState extends State<_QrisSimulationDialog>
   late Animation<double> _pulseAnimation;
   int _countdown = 300; // 5 menit dalam detik
   bool _isProcessing = false;
+  String? _fileName;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -896,6 +898,154 @@ class _QrisSimulationDialogState extends State<_QrisSimulationDialog>
       setState(() => _countdown--);
       return _countdown > 0 && mounted;
     });
+  }
+
+  void _simulateUpload() {
+    if (_isUploading) return;
+    setState(() {
+      _isUploading = true;
+    });
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _fileName = 'bukti_transfer_qris_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}.png';
+        });
+      }
+    });
+  }
+
+  void _clearUpload() {
+    setState(() {
+      _fileName = null;
+    });
+  }
+
+  Widget _buildUploader() {
+    if (_isUploading) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Mengunggah bukti pembayaran...',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_fileName != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE6F4EA), // light success green
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF34A853).withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _fileName!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    '1.2 MB • Berhasil diunggah',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF137333),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: _clearUpload,
+              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _simulateUpload,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: AppColors.cyanLight.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.cyan.withOpacity(0.5),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.cloud_upload_outlined,
+              color: AppColors.primary.withOpacity(0.8),
+              size: 28,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Unggah Bukti Pembayaran',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Format JPG/PNG, ukuran maks. 5MB (wajib)',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -1078,6 +1228,8 @@ class _QrisSimulationDialogState extends State<_QrisSimulationDialog>
                       _eWalletChip('ShopeePay'),
                     ],
                   ),
+                  const SizedBox(height: 20),
+                  _buildUploader(),
                   const SizedBox(height: 24),
 
                   // Tombol Konfirmasi
@@ -1087,11 +1239,13 @@ class _QrisSimulationDialogState extends State<_QrisSimulationDialog>
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        disabledForegroundColor: Colors.grey.shade500,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
-                      onPressed: _isProcessing
+                      onPressed: _isProcessing || _fileName == null
                           ? null
                           : () {
                               setState(() => _isProcessing = true);

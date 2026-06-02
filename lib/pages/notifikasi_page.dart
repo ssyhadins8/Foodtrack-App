@@ -185,6 +185,15 @@ class _NotifTabState extends State<_NotifTab> {
         _timer?.cancel();
         final allDocs = snap.data!.docs;
         final filtered = allDocs.where((doc) => (doc.data() as Map<String, dynamic>)['tipe'] == widget.tipe).toList();
+        
+        final unreadIds = filtered
+            .where((doc) => (doc.data() as Map<String, dynamic>)['dibaca'] == false)
+            .map((doc) => doc.id)
+            .toList();
+        if (unreadIds.isNotEmpty) {
+          Future.microtask(() => FirestoreService.tandaiSemuaDibaca(unreadIds));
+        }
+
         filtered.sort((a, b) {
           final aTime = (a.data() as Map<String, dynamic>)['waktu'];
           final bTime = (b.data() as Map<String, dynamic>)['waktu'];
