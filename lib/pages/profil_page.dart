@@ -1,12 +1,76 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:foodtrack/cart_provider.dart';
 import 'package:foodtrack/theme/app_colors.dart';
 import 'package:foodtrack/services/firestore_service.dart';
 import 'package:foodtrack/pages/status_pesanan_page.dart';
 import 'package:foodtrack/theme/premium_background.dart';
+import 'package:foodtrack/pages/cart_page.dart';
+import 'package:foodtrack/pages/user/order_history_page.dart';
+
+Widget buildAvatarImage(String? photoUrl, String nama, {double size = 84, double fontSize = 36}) {
+  Widget initialAvatar = Container(
+    color: AppColors.primary,
+    child: Center(
+      child: Text(
+        nama.isNotEmpty ? nama[0].toUpperCase() : '?',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+  );
+
+  if (photoUrl == null || photoUrl.isEmpty) {
+    return initialAvatar;
+  }
+
+  if (photoUrl.startsWith('data:image/') && photoUrl.contains('base64,')) {
+    try {
+      final base64String = photoUrl.split('base64,')[1];
+      final bytes = base64.decode(base64String);
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        width: size,
+        height: size,
+        errorBuilder: (_, __, ___) => initialAvatar,
+      );
+    } catch (e) {
+      return initialAvatar;
+    }
+  } else if (photoUrl.startsWith('http')) {
+    return Image.network(
+      photoUrl,
+      fit: BoxFit.cover,
+      width: size,
+      height: size,
+      errorBuilder: (_, __, ___) => initialAvatar,
+    );
+  } else {
+    try {
+      final bytes = base64.decode(photoUrl);
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        width: size,
+        height: size,
+        errorBuilder: (_, __, ___) => initialAvatar,
+      );
+    } catch (e) {
+      return initialAvatar;
+    }
+  }
+}
 
 class ProfilPage extends StatelessWidget {
   const ProfilPage({super.key});
@@ -124,15 +188,8 @@ class ProfilPage extends StatelessWidget {
                                 width: 2.5,
                               ),
                             ),
-                            child: Center(
-                              child: Text(
-                                nama[0].toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                            child: ClipOval(
+                              child: buildAvatarImage(userData['photoUrl'] as String?, nama, size: 84, fontSize: 36),
                             ),
                           ),
                           Positioned(
@@ -805,10 +862,12 @@ class EditProfilPage extends StatefulWidget {
 
 class _EditProfilPageState extends State<EditProfilPage> {
   late TextEditingController _namaCtrl, _prodiCtrl, _nimCtrl, _noHpCtrl;
-  String _role = 'Mahasiswa';
+  String _role = 'Pembeli';
   bool _loading = false;
+  Uint8List? _imageBytes;
+  String? _photoUrl;
 
-  final _roles = ['Mahasiswa', 'Dosen', 'Staf / Karyawan', 'Pengunjung Umum'];
+  final _roles = ['Mahasiswa', 'Alumni', 'Umum'];
 
   @override
   void initState() {
@@ -817,8 +876,26 @@ class _EditProfilPageState extends State<EditProfilPage> {
     _prodiCtrl = TextEditingController(text: widget.userData['prodi'] ?? '');
     _nimCtrl = TextEditingController(text: widget.userData['nim'] ?? '');
     _noHpCtrl = TextEditingController(text: widget.userData['noHp'] ?? '');
+    _photoUrl = widget.userData['photoUrl'] as String?;
     final rawRole = widget.userData['role'] ?? 'Mahasiswa';
-    _role = _roles.contains(rawRole) ? rawRole : 'Mahasiswa';
+    final mappedRole = (rawRole == 'Pembeli') ? 'Mahasiswa' : rawRole;
+    _role = _roles.contains(mappedRole) ? mappedRole : 'Mahasiswa';
+  }
+
+  Future<void> _pickPhoto() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      setState(() => _imageBytes = bytes);
+    }
+  }
+
+  Future<void> _hapusFoto() async {
+    setState(() {
+      _imageBytes = null;
+      _photoUrl = null;
+    });
   }
 
   @override
@@ -832,16 +909,42 @@ class _EditProfilPageState extends State<EditProfilPage> {
 
   Future<void> _simpan() async {
     if (_namaCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Nama tidak boleh kosong!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama tidak boleh kosong!')),
+      );
       return;
     }
     setState(() => _loading = true);
     try {
-      await FirebaseAuth.instance.currentUser?.updateDisplayName(
-        _namaCtrl.text.trim(),
-      );
+      String? uploadedUrl = _photoUrl;
+
+      // Convert photo to base64 if new one was picked
+      if (_imageBytes != null) {
+        final base64Str = base64Encode(_imageBytes!);
+        uploadedUrl = 'data:image/jpeg;base64,$base64Str';
+      }
+
+      await FirebaseAuth.instance.currentUser?.updateDisplayName(_namaCtrl.text.trim());
+      
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        if (uploadedUrl != null) {
+          // Set to null to avoid FirebaseAuth URL length limits for Base64 strings
+          await FirebaseAuth.instance.currentUser?.updatePhotoURL(null);
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .update({'photoUrl': uploadedUrl});
+        } else if (_photoUrl == null) {
+          // Photo was deleted
+          await FirebaseAuth.instance.currentUser?.updatePhotoURL(null);
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .update({'photoUrl': FieldValue.delete()});
+        }
+      }
+
       await FirestoreService.updateProfil(
         nama: _namaCtrl.text.trim(),
         prodi: _prodiCtrl.text.trim(),
@@ -849,6 +952,7 @@ class _EditProfilPageState extends State<EditProfilPage> {
         noHp: _noHpCtrl.text.trim(),
         role: _role,
       );
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -859,11 +963,13 @@ class _EditProfilPageState extends State<EditProfilPage> {
       );
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: $e')),
+        );
+      }
     }
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   @override
@@ -892,48 +998,62 @@ class _EditProfilPageState extends State<EditProfilPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Avatar
+            // Avatar with photo upload
             Center(
-              child: Stack(
+              child: Column(
                 children: [
-                  Container(
-                    width: 90,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.secondary],
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.cyan, width: 2.5),
-                    ),
-                    child: Center(
-                      child: Text(
-                        widget.displayName[0].toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 38,
-                          fontWeight: FontWeight.bold,
+                  GestureDetector(
+                    onTap: _pickPhoto,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 90,
+                          height: 90,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.cyan, width: 2.5),
+                          ),
+                          child: ClipOval(
+                            child: _imageBytes != null
+                                ? Image.memory(_imageBytes!, fit: BoxFit.cover)
+                                : buildAvatarImage(_photoUrl, widget.displayName, size: 90, fontSize: 38),
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          bottom: 4,
+                          right: 4,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1a202c),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Positioned(
-                    bottom: 4,
-                    right: 4,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.cyan,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                  if ((_photoUrl != null && _photoUrl!.isNotEmpty) || _imageBytes != null) ...[
+                    const SizedBox(height: 6),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
                       ),
-                      child: const Icon(
-                        Icons.camera_alt_rounded,
-                        color: AppColors.primary,
-                        size: 14,
+                      onPressed: _hapusFoto,
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 14),
+                      label: const Text(
+                        'Hapus Foto',
+                        style: TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -1037,6 +1157,22 @@ class _EditProfilPageState extends State<EditProfilPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInitialAvatar() {
+    return Container(
+      color: AppColors.primary,
+      child: Center(
+        child: Text(
+          widget.displayName.isNotEmpty ? widget.displayName[0].toUpperCase() : '?',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 38,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -1202,362 +1338,7 @@ class _EditProfilPageState extends State<EditProfilPage> {
       );
 }
 
-// ===== RIWAYAT PESANAN (dari Firestore) =====
-class RiwayatPesananPage extends StatelessWidget {
-  final CartProvider cart;
-  const RiwayatPesananPage({super.key, required this.cart});
 
-  String _fmt(int h) =>
-      'Rp${h.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
-
-  String _tgl(DateTime dt) {
-    const b = [
-      '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Agu',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des',
-    ];
-    return '${dt.day} ${b[dt.month]} ${dt.year}, '
-        '${dt.hour.toString().padLeft(2, '0')}.'
-        '${dt.minute.toString().padLeft(2, '0')} WIB';
-  }
-
-  Color _sc(int i) {
-    switch (i) {
-      case 0:
-        return AppColors.primary;
-      case 1:
-        return AppColors.warning;
-      case 2:
-        return AppColors.success;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _sl(int i) {
-    switch (i) {
-      case 0:
-        return 'Pesanan Diterima';
-      case 1:
-        return 'Sedang Dimasak';
-      case 2:
-        return 'Siap Diambil!';
-      case 3:
-        return 'Selesai';
-      default:
-        return '';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(gradient: AppColors.headerGradient),
-        ),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-            size: 18,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Riwayat Pesanan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: uid == null
-          ? const Center(child: Text('Silakan login'))
-          : StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('pesanan')
-                  .where('uid', isEqualTo: uid)
-                  .orderBy('waktuPesan', descending: true)
-                  .snapshots(),
-              builder: (ctx, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
-                }
-                final docs = snap.data?.docs ?? [];
-                if (docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: AppColors.cyanLight,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.receipt_long_outlined,
-                            size: 40,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Belum ada riwayat pesanan',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Yuk pesan makanan dari kantin!',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                  itemCount: docs.length,
-                  itemBuilder: (_, i) {
-                    final d = docs[i].data() as Map<String, dynamic>;
-                    final status = d['statusIndex'] as int? ?? 0;
-                    final isAktif = status < 3;
-                    final waktu = (d['waktuPesan'] as Timestamp?)?.toDate() ??
-                        DateTime.now();
-                    final items =
-                        (d['items'] as List?)?.cast<Map<String, dynamic>>() ??
-                            [];
-                    final docId = docs[i].id;
-
-                    return GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => StatusPesananPage(docId: docId),
-                        ),
-                      ),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: isAktif
-                              ? Border.all(
-                                  color: _sc(status).withOpacity(0.3),
-                                  width: 1.5,
-                                )
-                              : null,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.06),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: _sc(status).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      status == 0
-                                          ? Icons.receipt_long_rounded
-                                          : status == 1
-                                              ? Icons.restaurant_rounded
-                                              : status == 2
-                                                  ? Icons.check_circle_rounded
-                                                  : Icons.done_all_rounded,
-                                      color: _sc(status),
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          d['kantin'] ?? '-',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.textPrimary,
-                                          ),
-                                        ),
-                                        Text(
-                                          _tgl(waktu),
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            color: AppColors.textHint,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _sc(status).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _sl(status),
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            color: _sc(status),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'No. ${d['noAntrian']}',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: const BorderRadius.vertical(
-                                  bottom: Radius.circular(16),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  ...items.take(2).map(
-                                        (item) => Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 4,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Text(
-                                                '${item['qty']}x',
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: AppColors.textHint,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Expanded(
-                                                child: Text(
-                                                  item['nama'] ?? '',
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color:
-                                                        AppColors.textPrimary,
-                                                  ),
-                                                ),
-                                              ),
-                                              Text(
-                                                _fmt(
-                                                  (item['harga'] as int) *
-                                                      (item['qty'] as int),
-                                                ),
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: AppColors.primary,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                  if (items.length > 2)
-                                    Text(
-                                      '+${items.length - 2} item lainnya',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textHint,
-                                      ),
-                                    ),
-                                  const Divider(height: 10),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        d['metode'] ?? '-',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.textHint,
-                                        ),
-                                      ),
-                                      Text(
-                                        _fmt(d['totalHarga'] as int? ?? 0),
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-    );
-  }
-}
 
 // ===== MENU FAVORIT =====
 class MenuFavoritPage extends StatefulWidget {
@@ -1759,9 +1540,90 @@ class _PengaturanNotifPageState extends State<PengaturanNotifPage> {
       _pengingat = true,
       _suara = true,
       _getar = true;
+  bool _loadingSettings = true;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      setState(() => _loadingSettings = false);
+      return;
+    }
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final settings = doc.data()?['notificationSettings'] as Map<String, dynamic>?;
+      if (settings != null && mounted) {
+        setState(() {
+          _pesanan = settings['pesanan'] as bool? ?? true;
+          _promo = settings['promo'] as bool? ?? false;
+          _pengingat = settings['pengingat'] as bool? ?? true;
+          _suara = settings['suara'] as bool? ?? true;
+          _getar = settings['getar'] as bool? ?? true;
+        });
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _loadingSettings = false);
+  }
+
+  Future<void> _saveSettings() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    setState(() => _saving = true);
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'notificationSettings': {
+          'pesanan': _pesanan,
+          'promo': _promo,
+          'pengingat': _pengingat,
+          'suara': _suara,
+          'getar': _getar,
+        }
+      }, SetOptions(merge: true));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pengaturan berhasil disimpan'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menyimpan: $e'), backgroundColor: AppColors.danger),
+        );
+      }
+    }
+    if (mounted) setState(() => _saving = false);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loadingSettings) {
+      return Scaffold(
+        appBar: AppBar(
+          flexibleSpace: Container(decoration: const BoxDecoration(gradient: AppColors.headerGradient)),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text('Pengaturan Notifikasi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
+    return _buildContent();
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
@@ -1848,31 +1710,28 @@ class _PengaturanNotifPageState extends State<PengaturanNotifPage> {
           const SizedBox(height: 20),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: const Color(0xFF1a202c),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
               elevation: 0,
             ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Pengaturan disimpan!'),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'Simpan Pengaturan',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
+            onPressed: _saving ? null : _saveSettings,
+            child: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : const Text(
+                    'Simpan Pengaturan',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
           ),
         ],
       ),

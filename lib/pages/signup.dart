@@ -182,6 +182,65 @@ class _SignUpState extends State<SignUp> {
     }
   }
 
+  void _promptAdminPasscode() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Passcode Keamanan Admin', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Masukkan passcode khusus untuk mendaftar sebagai Admin:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                obscureText: true,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Passcode',
+                  filled: true,
+                  fillColor: AppColors.cyanLight,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.cyan.withValues(alpha: 0.3)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () {
+                if (controller.text == 'ADMIN2026') {
+                  setState(() {
+                    _role = 'admin';
+                  });
+                  Navigator.pop(context);
+                  _snack('Akses Admin disetujui!', error: false);
+                } else {
+                  _snack('Passcode salah! Akses ditolak.');
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Verifikasi', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -366,7 +425,7 @@ class _SignUpState extends State<SignUp> {
                             _RoleChip(
                               label: '🔑 Admin',
                               active: _role == 'admin',
-                              onTap: () => setState(() => _role = 'admin'),
+                              onTap: _promptAdminPasscode,
                             ),
                           ]),
                           const SizedBox(height: 16),
@@ -396,7 +455,7 @@ class _SignUpState extends State<SignUp> {
                             if (value == null || value.trim().isEmpty) {
                               return 'Email harus diisi';
                             }
-                            final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                             final emailRegex = RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$');
                             if (!emailRegex.hasMatch(value.trim())) {
                               return 'Format email tidak valid';
                             }
@@ -537,48 +596,6 @@ class _SignUpState extends State<SignUp> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Divider
-                          Row(children: [
-                            Expanded(
-                                child: Divider(color: Colors.grey.shade200)),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                'atau',
-                                style: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                                child: Divider(color: Colors.grey.shade200)),
-                          ]),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: const StadiumBorder(),
-                                side: BorderSide(color: Colors.grey.shade300, width: 1.2),
-                                backgroundColor: Colors.white,
-                                elevation: 0,
-                              ),
-                              icon: Image.asset('images/google.png', height: 22),
-                              label: const Text(
-                                'Lanjutkan dengan Google',
-                                style: TextStyle(
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              onPressed: _loading ? null : _loginWithGoogle,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
                           // Link Login
                           Center(
                             child: GestureDetector(
@@ -703,80 +720,7 @@ class _SignUpState extends State<SignUp> {
     );
   }
 
-  // ---------- GOOGLE SIGN‑IN LOGIC ----------
-  Future<void> _loginWithGoogle() async {
-    setState(() => _loading = true);
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignInConfig.getGoogleSignIn().signIn();
-      if (googleUser == null) return; // cancelled
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      final UserCredential cred = await FirebaseAuth.instance.signInWithCredential(credential);
-      final uid = cred.user?.uid;
-      if (uid == null) return;
 
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (!doc.exists) {
-        // New user: ask role
-        final role = await showDialog<String>(
-          context: context,
-          builder: (_) => RoleSelectorDialog(),
-        );
-        if (role == null) return;
-        Map<String, dynamic> newData = {
-          'uid': uid,
-          'email': cred.user?.email ?? '',
-          'nama': cred.user?.displayName ?? cred.user?.email?.split('@')[0] ?? '',
-          'role': role,
-          'createdAt': FieldValue.serverTimestamp(),
-        };
-        if (role == 'pedagang') {
-          final selectedKantin = await showDialog<String>(
-            context: context,
-            builder: (_) => KantinSelectorDialog(),
-          );
-          if (selectedKantin != null) {
-            newData.addAll({
-              'namaKantin': selectedKantin,
-              'kantinId': selectedKantin.toLowerCase().replaceAll(' ', '_'),
-            });
-          }
-        }
-        await FirebaseFirestore.instance.collection('users').doc(uid).set(newData);
-        _navigateByRole(role, newData);
-        return;
-      }
-      final role = doc.data()?['role'] ?? 'pembeli';
-      _navigateByRole(role, doc.data() ?? {});
-    } on FirebaseAuthException catch (e) {
-      _snack('Google login gagal: ${e.message ?? e.code}');
-    } catch (e) {
-      _snack('Terjadi kesalahan: $e');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  void _navigateByRole(String role, Map<String, dynamic> data) {
-    if (!mounted) return;
-    if (role == 'admin') {
-      Navigator.pushReplacementNamed(context, '/home_admin');
-    } else if (role == 'pedagang') {
-      Navigator.pushReplacementNamed(
-        context,
-        '/home_pedagang',
-        arguments: {
-          'namaKantin': data['namaKantin'] ?? 'Kantin Saya',
-          'kantinId': data['kantinId'] ?? '',
-        },
-      );
-    } else {
-      Navigator.pushReplacementNamed(context, '/home');
-    }
-  }
 }
 
 class _RoleChip extends StatelessWidget {

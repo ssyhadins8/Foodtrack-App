@@ -1,58 +1,62 @@
+# Panduan Presentasi UAS Pemrograman Mobile
 
-## BAGIAN 1: PERTANYAAN ARSITEKTUR KODE & STRUKTUR FILE
-
-### Pertanyaan 1: "Mengapa Anda menggunakan arsitektur folder seperti ini? Jelaskan pembagiannya!"
-*   **Jawaban Cerdas:**  
-    "Kami menerapkan arsitektur modular yang memisahkan tanggung jawab (*Separation of Concerns*) agar kode bersifat bersih, terukur (*scalable*), dan mudah dirawat:
-    1.  **`lib/pages/` (Presentation Layer):** Khusus menyimpan file antarmuka (View) seperti form login, dashboard admin, pedagang, dan pembeli.
-    2.  **`lib/services/` (Data/Backend Layer):** Menampung `firestore_service.dart` sebagai repositori backend tunggal yang berkomunikasi langsung dengan API Firebase dan cuaca.
-    3.  **`lib/theme/` (Design System):** Menyimpan sistem pewarnaan premium (`app_colors.dart`) agar konsistensi warna visual tetap terjaga di semua halaman.
-    4.  **`cart_provider.dart` (State Management):** Mengatur state global keranjang belanja yang terpisah dari widget UI."
-
-### Pertanyaan 2: "Mengapa Anda memilih Provider sebagai State Management?"
-*   **Jawaban Cerdas:**  
-    "Kami memilih **Provider** karena merupakan state management resmi yang direkomendasikan oleh tim Flutter. Provider menggunakan mekanisme *InheritedWidget* secara efisien di belakang layar.
-    Keunggulannya dibanding `setState` biasa:
-    - Mencegah render ulang seluruh halaman (*re-rendering waste*) saat item keranjang bertambah. Hanya widget terkecil seperti badge keranjang saja yang merender ulang menggunakan `Consumer`.
-    - Logika perhitungan belanja (subtotal, pajak, biaya layanan) terpisah secara bersih dari berkas UI halaman belanja."
+Dokumen ini disusun sebagai panduan persiapan tanya jawab dan demonstrasi kode program saat presentasi evaluasi akhir proyek UAS Pemrograman Mobile untuk aplikasi FoodTrack.
 
 ---
 
-## BAGIAN 2: PENJELASAN INTEGRASI DATABASE & REAL-TIME API
+## Bagian 1: Konsep Arsitektur dan Manajemen State
 
-### 💬 Pertanyaan 3: "Bagaimana cara kerja sinkronisasi data real-time di aplikasi ini?"
-*   **Jawaban Cerdas:**  
-    "Kami memanfaatkan fitur **Streams** (`snapshots()`) yang disediakan oleh Cloud Firestore SDK di `firestore_service.dart`. 
-    - Saat pedagang mengubah status pesanan (contoh: dari *Diproses* menjadi *Siap Diambil*), Firestore akan mengirimkan data perubahan tersebut melalui *websocket* secara langsung.
-    - Halaman Pelacakan di sisi pembeli menggunakan widget `StreamBuilder` untuk menangkap aliran data (*stream*) tersebut dan memperbarui antarmuka dalam hitungan milidetik secara reaktif tanpa perlu reload aplikasi."
+### Pertanyaan 1: Mengapa menggunakan struktur direktori proyek seperti ini? Jelaskan pembagiannya!
+* **Jawaban:**  
+  "Kami membagi struktur kode program berdasarkan prinsip pemisahan tanggung jawab (Separation of Concerns) untuk memudahkan pemeliharaan dan pengembangan skala besar:
+  1. **`lib/pages/` (Presentation Layer):** Menyimpan seluruh komponen antarmuka pengguna (Views) seperti form masuk, dashboard admin, panel pedagang, dan panel pembeli.
+  2. **`lib/services/` (Data/Backend Layer):** Berisi berkas integrasi Firebase (`firestore_service.dart`) untuk komunikasi database dan otentikasi, serta logika estimasi antrean (`queue_service.dart`).
+  3. **`lib/theme/` (Design System):** Menampung konfigurasi visual global (`app_colors.dart`) guna memastikan konsistensi warna antarmuka di seluruh modul halaman.
+  4. **`cart_provider.dart` (State Management):** Mengatur kondisi state global dari keranjang belanja secara independen dari kode program antarmuka."
 
-### 💬 Pertanyaan 4: "Jelaskan bagaimana sistem Auto-Seeding database Anda bekerja!"
-*   **Jawaban Cerdas:**  
-    "Saat aplikasi pertama kali diluncurkan (`main.dart`), fungsi `seedInitialData()` di `firestore_service.dart` akan berjalan secara otomatis.
-    - Sistem akan mengecek apakah koleksi `'kantin'` di database Firestore sudah terisi.
-    - Jika kosong, sistem otomatis membuat **8 data kantin mahasiswa** beserta puluhan menu makanan-minuman secara dinamis lengkap dengan harga, deskripsi, rating, dan asset gambarnya yang lezat.
-    - Jika database sudah terisi, sistem akan langsung melewati proses ini agar menghemat kuota jaringan dan mempercepat loading aplikasi."
-
-### 💬 Pertanyaan 5: "Bagaimana integrasi API Cuaca Kampus Anda bekerja?"
-*   **Jawaban Cerdas:**  
-    "Kami memanggil API Cuaca secara dinamis di `WeatherService` menggunakan paket `http`. Data cuaca terkini yang didapat kemudian kami olah untuk memberikan rekomendasi cerdas di beranda pembeli secara reaktif. Jika cuaca dingin atau hujan, aplikasi otomatis merekomendasikan menu berkuah hangat seperti Soto."
+### Pertanyaan 2: Mengapa memilih Provider sebagai pustaka State Management?
+* **Jawaban:**  
+  "Kami memilih Provider karena merupakan pustaka resmi yang direkomendasikan oleh Flutter untuk manajemen state. Provider menyederhanakan penggunaan InheritedWidget untuk meneruskan data ke bawah pohon widget secara reaktif.
+  Keunggulannya dibanding setState konvensional:
+  - Mengurangi konsumsi daya render ulang (re-rendering) pada widget induk yang tidak mengalami perubahan data.
+  - Logika kalkulasi matematis seperti perhitungan pajak, subtotal, dan biaya aplikasi terpisah secara eksplisit dari kode widget visual."
 
 ---
 
-## 💻 BAGIAN 3: JIKA DOSEN MEMINTA LIVE CODING / DEMO KODE
+## Bagian 2: Integrasi Database dan API Real-Time
 
-Berikut adalah letak-letak kode penting di proyek Anda yang biasanya ingin dilihat oleh dosen saat presentasi:
+### Pertanyaan 3: Bagaimana mekanisme sinkronisasi data real-time bekerja pada aplikasi ini?
+* **Jawaban:**  
+  "Aplikasi memanfaatkan fitur Streams (`snapshots()`) yang disediakan oleh Cloud Firestore SDK pada kelas `FirestoreService`.
+  - Ketika status pesanan diperbarui oleh pedagang di panel kontrol dapur (misalnya status dari 'Diproses' berubah menjadi 'Siap Diambil'), Firestore akan mendistribusikan data perubahan tersebut secara langsung melalui koneksi WebSocket.
+  - Halaman pelacakan pembeli menggunakan widget `StreamBuilder` untuk memantau aliran data tersebut dan secara otomatis memperbarui antarmuka pengguna dalam hitungan milidetik secara reaktif tanpa membutuhkan tindakan muat ulang halaman."
 
-1.  **Di mana letak pemicu scroll otomatis dan filter rating tertinggi di halaman beranda?**
-    - Buka berkas [home.dart](file:///C:/FoodTrack/foodtruck/lib/pages/home.dart#L578-L617). Tunjukkan tombol `GestureDetector` pada "Lihat Semua" yang memicu fungsi `setState()` untuk mengaktifkan filter `_showOnlyTopCanteens = true` dan memanggil `_scrollToSemuaKantin()` menggunakan `ScrollController` dan `GlobalKey` secara halus.
-2.  **Di mana logika validasi registrasi role user baru disimpan?**
-    - Buka berkas [signup.dart](file:///C:/FoodTrack/foodtruck/lib/pages/signup.dart#L240-L290). Tunjukkan selektor dropdown role (Pembeli / Pedagang) yang jika dipilih sebagai pedagang akan meminta input nama kantin baru, kemudian menyimpannya ke koleksi `users` di Firestore.
-3.  **Di mana logika CRUD Menu Pedagang dideklarasikan?**
-    - Buka berkas [menu_pedagang_page.dart](file:///C:/FoodTrack/foodtruck/lib/pages/pedagang/menu_pedagang_page.dart#L22-L130). Tunjukkan fungsi `_showForm` yang membuka sheet bawah (*bottom sheet*) untuk menambah atau mengedit menu serta menyimpannya langsung ke koleksi `'menu'` di Firestore.
-4.  **Di mana letak kode Auto-Seeder database Firestore?**
-    - Buka berkas [firestore_service.dart](file:///C:/FoodTrack/foodtruck/lib/services/firestore_service.dart#L518-L720). Tunjukkan metode `seedInitialData()` yang mendeteksi data usang (`images/ayam_kremes.png` pada Bakso) dan otomatis melakukan pembersihan serta re-seed database secara bersih.
+### Pertanyaan 4: Jelaskan cara kerja pengisian data otomatis (database seeder)!
+* **Jawaban:**  
+  "Pada saat aplikasi pertama kali dijalankan (`main.dart`), fungsi `seedInitialData()` pada `FirestoreService` akan dieksekusi secara otomatis.
+  - Sistem akan melakukan verifikasi apakah koleksi database `'kantin'` di Firestore kosong.
+  - Jika kosong, sistem otomatis menyuntikkan data awal berupa 8 kantin default beserta daftar menunya masing-masing (harga, deskripsi, rating, jam operasional, dan gambar terkait).
+  - Jika terdeteksi database sudah terisi, sistem melewati fungsi ini untuk mempercepat waktu pemuatan aplikasi dan menghemat lalu lintas data."
+
+### Pertanyaan 5: Bagaimana integrasi API cuaca eksternal dilakukan?
+* **Jawaban:**  
+  "Aplikasi memanggil API cuaca eksternal (Open-Meteo) dengan mengirimkan parameter koordinat geografis. Data suhu udara yang diperoleh kemudian diolah untuk memberikan rekomendasi menu makanan di beranda pembeli secara otomatis (misalnya merekomendasikan soto hangat jika suhu terdeteksi dingin, atau es krim segar jika suhu terdeteksi panas terik)."
 
 ---
 
-> 🎯 **Tips Sukses Presentasi:**  
-> Jelaskan kode dengan tenang dan percaya diri. Tekankan kata-kata kunci seperti **"Real-time Websocket Streams"**, **"Responsive Multi-Role Dashboard"**, **"Clean Architecture"**, dan **"Reactive State Management"**. Selamat berjuang, nilai A sudah di tangan Anda!
+## Bagian 3: Panduan Lokasi Kode untuk Demonstrasi
+
+Berikut merupakan lokasi berkas kode sumber utama yang penting untuk ditunjukkan saat sesi demonstrasi program:
+
+1. **Logika Filter Beranda dan Transisi Gulir Otomatis:**
+   * Berkas: [home.dart](file:///C:/FoodTrack/foodtruck/lib/pages/home.dart)
+   * Tunjukkan tombol "Lihat Semua" yang memicu fungsi penapisan rating tertinggi (`_showOnlyTopCanteens`) serta fungsi gulir otomatis ke bagian daftar kantin menggunakan ScrollController.
+2. **Validasi Input Registrasi Role Pengguna:**
+   * Berkas: [signup.dart](file:///C:/FoodTrack/foodtruck/lib/pages/signup.dart)
+   * Tunjukkan input pilihan peran (Pembeli / Pedagang) yang dilengkapi validasi format email, sandi minimal 6 karakter, dan pencatatan nama kantin baru untuk peran pedagang.
+3. **Logika Pengelolaan Menu oleh Pedagang (CRUD Menu):**
+   * Berkas: [menu_pedagang_page.dart](file:///C:/FoodTrack/foodtruck/lib/pages/pedagang/menu_pedagang_page.dart)
+   * Tunjukkan form tambah/edit menu yang langsung melakukan sinkronisasi pembaruan data ke koleksi `'menu'` di Firestore.
+4. **Metode Inisialisasi Otomatis Database (Seeder):**
+   * Berkas: [firestore_service.dart](file:///C:/FoodTrack/foodtruck/lib/services/firestore_service.dart)
+   * Tunjukkan metode `seedInitialData()`, `seedNewFoodcourtBaru()`, dan `seedTobyChicken()` yang bertugas mengisi data default ke koleksi database Firestore.

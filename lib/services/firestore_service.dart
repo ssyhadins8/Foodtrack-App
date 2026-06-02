@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:foodtrack/models/voucher_model.dart';
 import 'package:foodtrack/cart_provider.dart';
 
 class FirestoreService {
@@ -35,6 +36,7 @@ class FirestoreService {
         'prodi': '',
         'nim': '',
         'noHp': '',
+        'loyaltyPoints': 0,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -132,6 +134,17 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      // ==== NOTIFIKASI ==== //
+      if (_uid != null) {
+        await simpanNotifikasi(
+          judul: 'Pesanan Baru',
+          pesan: 'Anda memiliki pesanan baru dengan no antrian $noAntrian',
+          tipe: 'pesanan',
+          icon: 'receipt',
+          targetUid: _uid,
+          pesananId: docRef.id,
+        );
+      }
       return docRef.id;
     } catch (e) {
       debugPrint('simpanPesanan error: $e');
@@ -150,15 +163,42 @@ class FirestoreService {
       final snap = await _db
           .collection('pesanan')
           .where('noAntrian', isEqualTo: noAntrian)
-          .where('uid', isEqualTo: _uid)
           .limit(1)
           .get();
 
       if (snap.docs.isNotEmpty) {
-        await snap.docs.first.reference.update({
+        final docRef = snap.docs.first.reference;
+        await docRef.update({
           'statusIndex': statusIndex,
           'updatedAt': FieldValue.serverTimestamp(),
         });
+
+        // ==== NOTIFIKASI STATUS ==== //
+        final orderData = snap.docs.first.data();
+        final buyerUid = orderData['uid'] as String? ?? '';
+        final pesananId = snap.docs.first.id;
+        String pesan;
+        switch (statusIndex) {
+          case 1:
+            pesan = 'Pesanan sedang diproses.';
+            break;
+          case 2:
+            pesan = 'Pesanan siap diambil.';
+            break;
+          case 3:
+            pesan = 'Pesanan selesai.';
+            break;
+          default:
+            pesan = 'Status pesanan berubah.';
+        }
+        await simpanNotifikasi(
+          judul: 'Update Status Pesanan',
+          pesan: pesan,
+          tipe: 'pesanan',
+          icon: 'info',
+          targetUid: buyerUid,
+          pesananId: pesananId,
+        );
       }
     } catch (e) {
       debugPrint('updateStatusPesanan error: $e');
@@ -215,7 +255,7 @@ class FirestoreService {
     required String pesan,
     required String tipe,
     required String icon,
-    String? targetUid, // ✅ Tambahkan targetUid agar pedagang bisa kirim notif ke user
+    String? targetUid,
     String? pesananId,
   }) async {
     try {
@@ -232,6 +272,20 @@ class FirestoreService {
         'dibaca': false,
         'waktu': FieldValue.serverTimestamp(),
       });
+
+      // Auto-duplicate pesanan notifications to aktivitas tab as well
+      if (tipe == 'pesanan') {
+        await _db.collection('notifikasi').add({
+          'uid': uid,
+          'judul': judul,
+          'pesan': pesan,
+          'tipe': 'aktivitas',
+          'icon': icon,
+          'pesananId': pesananId,
+          'dibaca': false,
+          'waktu': FieldValue.serverTimestamp(),
+        });
+      }
     } catch (e) {
       debugPrint('simpanNotifikasi error: $e');
       rethrow;
@@ -241,10 +295,18 @@ class FirestoreService {
   // =========================================================
   // STREAM NOTIFIKASI USER
   // =========================================================
+  static Stream<QuerySnapshot<Map<String, dynamic>>> streamAllNotifikasi(String uid) {
+    return _db
+        .collection('notifikasi')
+        .where('uid', isEqualTo: uid)
+        .snapshots();
+  }
+
   static Stream<QuerySnapshot<Map<String, dynamic>>> streamNotifikasi() {
     return _db
         .collection('notifikasi')
         .where('uid', isEqualTo: _uid)
+        .where('dibaca', isEqualTo: false)
         .orderBy('waktu', descending: true)
         .snapshots();
   }
@@ -302,9 +364,6 @@ class FirestoreService {
     }
   }
 
-  // =========================================================
-  // UPDATE FOTO PROFIL
-  // =========================================================
   // =========================================================
   // TOGGLE FAVORITE MENU
   // =========================================================
@@ -378,6 +437,8 @@ class FirestoreService {
     bool isTop = false,
     String waktu = '10-15 mnt',
     int totalMenu = 0,
+    String foodcourtId = 'lama',
+    String foodcourtLabel = 'Foodcourt Lama',
   }) async {
     try {
       await _db.collection('kantin').add({
@@ -389,6 +450,8 @@ class FirestoreService {
         'isTop': isTop,
         'waktu': waktu,
         'totalMenu': totalMenu,
+        'foodcourtId': foodcourtId,
+        'foodcourtLabel': foodcourtLabel,
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -407,6 +470,8 @@ class FirestoreService {
     required bool isTop,
     required String waktu,
     required int totalMenu,
+    String foodcourtId = 'lama',
+    String foodcourtLabel = 'Foodcourt Lama',
   }) async {
     try {
       await _db.collection('kantin').doc(id).update({
@@ -418,6 +483,8 @@ class FirestoreService {
         'isTop': isTop,
         'waktu': waktu,
         'totalMenu': totalMenu,
+        'foodcourtId': foodcourtId,
+        'foodcourtLabel': foodcourtLabel,
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -513,138 +580,220 @@ class FirestoreService {
   }
 
   // =========================================================
+  // PATCH: Add foodcourt labels & new kantins (run once)
+  // =========================================================
+  static Future<void> seedNewFoodcourtBaru() async {
+    try {
+      // Check if already patched to the new 6/6 division and specific images
+      final checkMenu = await _db.collection('menu').where('nama', isEqualTo: 'Ketan Durian Keju Susu Fla').limit(1).get();
+      if (checkMenu.docs.isNotEmpty && checkMenu.docs.first.data()['gambar'] == 'images/Ketan Durian Keju Susu Fla.png') {
+        debugPrint('seedNewFoodcourtBaru: sudah dipatch dengan pembagian 6/6 dan gambar spesifik, skip.');
+        return;
+      }
+
+      // Force remove Ala Linlan canteen and its menus if they exist in Firestore
+      await _db.collection('kantin').doc('kantin_11').delete();
+      final alaLinlanMenus = await _db.collection('menu').where('kantinId', isEqualTo: 'kantin_11').get();
+      for (final doc in alaLinlanMenus.docs) {
+        await doc.reference.delete();
+      }
+
+      // Force remove Sego Njamoer canteen and its menus if they exist in Firestore
+      await _db.collection('kantin').doc('kantin_10').delete();
+      final segoNjamoerMenus = await _db.collection('menu').where('kantinId', isEqualTo: 'kantin_10').get();
+      for (final doc in segoNjamoerMenus.docs) {
+        await doc.reference.delete();
+      }
+
+      // 1. Patch kantin 1 s/d 6 with foodcourtId = 'lama'
+      final lamaIds = ['kantin_1','kantin_2','kantin_3','kantin_4','kantin_5','kantin_6'];
+      for (final id in lamaIds) {
+        await _db.collection('kantin').doc(id).update({
+          'foodcourtId': 'lama',
+          'foodcourtLabel': 'Foodcourt Lama',
+        });
+      }
+
+      // 2. Patch kantin 7 & 8 with foodcourtId = 'baru' to split them evenly 6/6
+      final baruIds = ['kantin_7','kantin_8'];
+      for (final id in baruIds) {
+        await _db.collection('kantin').doc(id).update({
+          'foodcourtId': 'baru',
+          'foodcourtLabel': 'Foodcourt Baru',
+        });
+      }
+
+      // 3. Add new kantin baru (excluding Sego Njamoer & Ala Linlan)
+      final newKantin = [
+        {'id': 'kantin_9',  'nama': 'Dimsum Station',    'deskripsi': 'Dimsum & Aneka Dumpling',       'kategori': 'Snack',   'gambar': 'images/Dimsum Station.jpg',    'rating': 4.8, 'isTop': true,  'waktu': '10-15 mnt', 'foodcourtId': 'baru', 'foodcourtLabel': 'Foodcourt Baru', 'totalMenu': 6},
+        {'id': 'kantin_12', 'nama': 'Pos Ketan Legenda', 'deskripsi': 'Ketan & Camilan Tradisional',   'kategori': 'Snack',   'gambar': 'images/Pos Ketan Legenda.jpg', 'rating': 4.5, 'isTop': false, 'waktu': '5-10 mnt',  'foodcourtId': 'baru', 'foodcourtLabel': 'Foodcourt Baru', 'totalMenu': 5},
+        {'id': 'kantin_13', 'nama': 'Bingxue',           'deskripsi': 'Es Krim & Minuman Kekinian',    'kategori': 'Minuman', 'gambar': 'images/Bingxue.jpeg',          'rating': 4.9, 'isTop': true,  'waktu': '5-10 mnt',  'foodcourtId': 'baru', 'foodcourtLabel': 'Foodcourt Baru', 'totalMenu': 6},
+      ];
+
+      for (final k in newKantin) {
+        await _db.collection('kantin').doc(k['id'] as String).set({
+          'nama': k['nama'],
+          'deskripsi': k['deskripsi'],
+          'kategori': k['kategori'],
+          'gambar': k['gambar'],
+          'rating': k['rating'],
+          'isTop': k['isTop'],
+          'waktu': k['waktu'],
+          'totalMenu': k['totalMenu'],
+          'foodcourtId': k['foodcourtId'],
+          'foodcourtLabel': k['foodcourtLabel'],
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Delete old menus for these new canteens to prevent duplicates
+      final oldMenus = await _db.collection('menu')
+          .where('kantinId', whereIn: ['kantin_9', 'kantin_12', 'kantin_13'])
+          .get();
+      for (final doc in oldMenus.docs) {
+        await doc.reference.delete();
+      }
+
+      // 4. Add menu for new kantins (Sego Njamoer & Ala Linlan excluded) with specific images
+      final newMenus = {
+        'kantin_9': [
+          {'nama': 'Lava Spicy Mayo', 'harga': 40000, 'gambar': 'images/Lava Spicy Mayo.png', 'kat': 'Snack', 'desc': 'Dimsum dengan saus spicy mayo hangat'},
+          {'nama': 'Kaicak Ayam Jamur', 'harga': 35000, 'gambar': 'images/Kaicak Ayam Jamur.png', 'kat': 'Snack', 'desc': 'Kaicak ayam jamur kukus'},
+          {'nama': 'Siewmay Nori Crab Stick', 'harga': 35000, 'gambar': 'images/Siewmay Nori Crab Stick.png', 'kat': 'Snack', 'desc': 'Siomay nori topping kepiting'},
+          {'nama': 'Pangsit Udang Goreng', 'harga': 35000, 'gambar': 'images/Pangsit Udang Goreng.png', 'kat': 'Snack', 'desc': 'Pangsit udang goreng renyah'},
+          {'nama': 'Lumpia Udang Kulit Tahu', 'harga': 35000, 'gambar': 'images/Lumpia Udang Kulit Tahu.png', 'kat': 'Snack', 'desc': 'Lumpia udang bungkus kulit tahu'},
+          {'nama': 'Lumpia Ayam Udang', 'harga': 35000, 'gambar': 'images/Lumpia Ayam Udang.png', 'kat': 'Snack', 'desc': 'Lumpia isi ayam dan udang'},
+        ],
+        'kantin_12': [
+          {'nama': 'Ketan Durian Keju Susu Fla', 'harga': 18000, 'gambar': 'images/Ketan Durian Keju Susu Fla.png', 'kat': 'Snack', 'desc': 'Ketan dengan topping durian, keju, dan susu fla manis'},
+          {'nama': 'Ketan Susu Vla Durian', 'harga': 16000, 'gambar': 'images/Ketan Susu Vla Durian.png', 'kat': 'Snack', 'desc': 'Ketan hangat dengan siraman vla durian dan susu kental manis'},
+          {'nama': 'Ketan Susu Fla Nangka', 'harga': 15000, 'gambar': 'images/Ketan Susu Fla Nangka.png', 'kat': 'Snack', 'desc': 'Ketan gurih dengan potongan nangka wangi dan fla susu'},
+          {'nama': 'Ketan Pisang + Keju Susu Fla', 'harga': 17000, 'gambar': 'images/Ketan Pisang + Keju Susu Fla.png', 'kat': 'Snack', 'desc': 'Ketan dipadukan dengan pisang manis, parutan keju, dan fla susu'},
+          {'nama': 'Ketan Susu Keju Meses', 'harga': 14000, 'gambar': 'images/Ketan Susu Keju Meses.png', 'kat': 'Snack', 'desc': 'Ketan susu dengan taburan keju parut dan meses cokelat manis'},
+        ],
+        'kantin_13': [
+          {'nama': 'Milk Tea Cloud Pudding Ice Cream', 'harga': 18000, 'gambar': 'images/Milk Tea Cloud Pudding Ice Cream.png', 'kat': 'Minuman', 'desc': 'Milk tea dengan pudding lembut dan ice cream vanilla'},
+          {'nama': 'Pudding Cup (Strawberry, Mango, Peach)', 'harga': 12000, 'gambar': 'images/Pudding Cup (Strawberry, Mango, Peach).png', 'kat': 'Minuman', 'desc': 'Pudding cup dengan aneka rasa buah segar'},
+          {'nama': 'Sanzha Apple', 'harga': 15000, 'gambar': 'images/Sanzha Apple.png', 'kat': 'Minuman', 'desc': 'Minuman teh apel sanzha menyegarkan'},
+          {'nama': 'Egg Waffle Chocolate', 'harga': 16000, 'gambar': 'images/Egg Waffle Chocolate.png', 'kat': 'Snack', 'desc': 'Egg waffle hangat rasa cokelat manis'},
+          {'nama': 'Chocolate Red Bean Sundae', 'harga': 15000, 'gambar': 'images/Chocolate Red Bean Sundae.png', 'kat': 'Minuman', 'desc': 'Es krim sundae cokelat dengan topping red bean'},
+          {'nama': 'Mulberry Bing-Shake', 'harga': 17000, 'gambar': 'images/Mulberry Bing-Shake.png', 'kat': 'Minuman', 'desc': 'Bing-shake mulberry dingin dan segar'},
+        ],
+      };
+
+      for (final entry in newMenus.entries) {
+        final kId = entry.key;
+        final kName = newKantin.firstWhere((k) => k['id'] == kId)['nama'] as String;
+        for (final m in entry.value) {
+          await _db.collection('menu').add({
+            'nama': m['nama'],
+            'harga': m['harga'],
+            'stok': 20,
+            'desc': m['desc'],
+            'kantin': kName,
+            'kantinId': kId,
+            'tersedia': true,
+            'kategori': m['kat'],
+            'gambar': m['gambar'],
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      debugPrint('seedNewFoodcourtBaru: berhasil patch lama + tambah 4 kantin baru!');
+    } catch (e) {
+      debugPrint('seedNewFoodcourtBaru error: $e');
+    }
+  }
+
+  // =========================================================
+  // PATCH: Add Toby's Chicken (kantin_14)
+  // =========================================================
+  static Future<void> seedTobyChicken() async {
+    try {
+      final checkMenu = await _db.collection('menu').where('nama', isEqualTo: 'Mujur Combo 1').limit(1).get();
+      if (checkMenu.docs.isNotEmpty && checkMenu.docs.first.data()['gambar'] != "images/Toby's Chicken.png") {
+        debugPrint('seedTobyChicken: sudah ada menu Toby baru dengan gambar spesifik, skip.');
+        return;
+      }
+
+      // Delete old Toby menus
+      final oldTobyMenus = await _db.collection('menu').where('kantinId', isEqualTo: 'kantin_14').get();
+      for (final doc in oldTobyMenus.docs) {
+        await doc.reference.delete();
+      }
+
+      // Add Toby's Chicken kantin
+      await _db.collection('kantin').doc('kantin_14').set({
+        'nama': "Toby's Chicken",
+        'deskripsi': 'Ayam Crispy & Korean Fried Chicken',
+        'kategori': 'Ayam',
+        'gambar': "images/Toby's Chicken.png",
+        'rating': 4.8,
+        'isTop': true,
+        'waktu': '10-15 mnt',
+        'totalMenu': 5,
+        'foodcourtId': 'baru',
+        'foodcourtLabel': 'Foodcourt Baru',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Add menus for Toby's Chicken
+      final tobysMenus = [
+        {'nama': 'Mujur Combo 1',        'harga': 25000, 'gambar': "images/Mujur Combo 1.png", 'kat': 'Ayam',    'desc': 'Paket hemat ayam goreng nasi dan minum'},
+        {'nama': 'Mujur Cheese',         'harga': 22000, 'gambar': "images/Mujur Cheese.png", 'kat': 'Ayam',    'desc': 'Ayam goreng renyah siram saus keju gurih'},
+        {'nama': 'Lava Cheese',          'harga': 23000, 'gambar': "images/Lava Cheese.png", 'kat': 'Ayam',    'desc': 'Ayam goreng pedas berpadu dengan saus keju meleleh'},
+        {'nama': 'T-Wingz Hot Lava Bowl','harga': 20000, 'gambar': "images/T-Wingz Hot Lava Bowl.png", 'kat': 'Ayam',    'desc': 'Sayap ayam crispy bersaus lava pedas disajikan di mangkuk'},
+        {'nama': 'Chicken Soup',         'harga': 12000, 'gambar': "images/Chicken Soup.png", 'kat': 'Ayam',    'desc': 'Sup ayam hangat dengan sayuran segar dan kaldu lezat'},
+      ];
+
+      for (final m in tobysMenus) {
+        await _db.collection('menu').add({
+          'nama': m['nama'],
+          'harga': m['harga'],
+          'stok': 20,
+          'desc': m['desc'],
+          'kantin': "Toby's Chicken",
+          'kantinId': 'kantin_14',
+          'tersedia': true,
+          'kategori': m['kat'],
+          'gambar': m['gambar'],
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      debugPrint("seedTobyChicken: Toby's Chicken berhasil ditambahkan dengan gambar spesifik!");
+    } catch (e) {
+      debugPrint('seedTobyChicken error: $e');
+    }
+  }
+
+  // =========================================================
   // DYNAMIC SEED INITIAL DATA
   // =========================================================
   static Future<void> seedInitialData() async {
     try {
-      final snap = await _db.collection('kantin').limit(1).get();
-      
-      // Auto-cleanup detection: check if the existing database uses outdated placeholder images
-      bool needReseed = false;
-      if (snap.docs.isNotEmpty) {
-        final testMenuSnap = await _db.collection('menu').where('nama', isEqualTo: 'Bakso Biasa').limit(1).get();
-        if (testMenuSnap.docs.isNotEmpty) {
-          final data = testMenuSnap.docs.first.data();
-          if (data['gambar'] == 'images/ayam_kremes.png') {
-            needReseed = true;
-          }
-        } else {
-          needReseed = true;
-        }
-      } else {
-        needReseed = true;
-      }
-
-      if (!needReseed) {
-        debugPrint('Kantin and menu data already up-to-date. Skipping seed.');
+      // Only seed if kantin collection is empty — do NOT overwrite admin data
+      final existingKantin = await _db.collection('kantin').limit(1).get();
+      if (existingKantin.docs.isNotEmpty) {
+        debugPrint('seedInitialData: database sudah ada data, skip seed.');
         return;
       }
 
-      debugPrint('Detected outdated menu assets. Clearing old canteen and menu data for clean re-seed...');
-      
-      // Delete old canteens
-      final oldKantin = await _db.collection('kantin').get();
-      for (var doc in oldKantin.docs) {
-        await doc.reference.delete();
-      }
-      
-      // Delete old menus
-      final oldMenu = await _db.collection('menu').get();
-      for (var doc in oldMenu.docs) {
-        await doc.reference.delete();
-      }
-
-      debugPrint('Seeding updated canteens and menu items to Firestore...');
-      
       final canteens = [
-        {
-          'id': 'kantin_1',
-          'nama': 'Kantin Bu Sari',
-          'deskripsi': 'Soto, Sup, & Aneka Gorengan',
-          'kategori': 'Soto',
-          'gambar': 'images/kantin1.jpg',
-          'rating': 4.8,
-          'isTop': true,
-          'waktu': '15-20 mnt',
-          'totalMenu': 5,
-        },
-        {
-          'id': 'kantin_2',
-          'nama': 'Kantin Pak Budi',
-          'deskripsi': 'Nasi Campur & Lauk Pauk',
-          'kategori': 'Nasi',
-          'gambar': 'images/kantin2.jpg',
-          'rating': 4.9,
-          'isTop': true,
-          'waktu': '10-15 mnt',
-          'totalMenu': 5,
-        },
-        {
-          'id': 'kantin_3',
-          'nama': 'Kantin Geprek',
-          'deskripsi': 'Ayam Geprek & Lalapan',
-          'kategori': 'Ayam',
-          'gambar': 'images/kantin3.jpeg',
-          'rating': 4.7,
-          'isTop': true,
-          'waktu': '15-20 mnt',
-          'totalMenu': 5,
-        },
-        {
-          'id': 'kantin_4',
-          'nama': 'Kantin Bakso Mas Jo',
-          'deskripsi': 'Bakso & Mie Ayam',
-          'kategori': 'Bakso',
-          'gambar': 'images/kantin4.jpeg',
-          'rating': 4.6,
-          'isTop': false,
-          'waktu': '10-15 mnt',
-          'totalMenu': 5,
-        },
-        {
-          'id': 'kantin_5',
-          'nama': 'Kantin Minuman Segar',
-          'deskripsi': 'Jus, Es, & Minuman',
-          'kategori': 'Minuman',
-          'gambar': 'images/kantin5.jpg',
-          'rating': 4.5,
-          'isTop': false,
-          'waktu': '5-10 mnt',
-          'totalMenu': 5,
-        },
-        {
-          'id': 'kantin_6',
-          'nama': 'Kantin Seafood Bu Tini',
-          'deskripsi': 'Seafood Segar & Nasi',
-          'kategori': 'Seafood',
-          'gambar': 'images/kantin6.png',
-          'rating': 4.7,
-          'isTop': true,
-          'waktu': '20-25 mnt',
-          'totalMenu': 5,
-        },
-        {
-          'id': 'kantin_7',
-          'nama': 'Kantin Snack Corner',
-          'deskripsi': 'Gorengan & Camilan',
-          'kategori': 'Snack',
-          'gambar': 'images/kantin7.jpeg',
-          'rating': 4.4,
-          'isTop': false,
-          'waktu': '5-10 mnt',
-          'totalMenu': 5,
-        },
-        {
-          'id': 'kantin_8',
-          'nama': 'Kantin Nasi Padang',
-          'deskripsi': 'Masakan Padang Lezat',
-          'kategori': 'Nasi',
-          'gambar': 'images/kantin8.jpg',
-          'rating': 4.9,
-          'isTop': true,
-          'waktu': '10-15 mnt',
-          'totalMenu': 5,
-        },
+        // ── FOODCOURT LAMA ──────────────────────────────────
+        {'id': 'kantin_1', 'nama': 'Kantin Bu Sari', 'deskripsi': 'Soto, Sup, & Aneka Gorengan', 'kategori': 'Soto', 'gambar': 'images/kantin1.jpg', 'rating': 4.8, 'isTop': true, 'waktu': '15-20 mnt', 'totalMenu': 5, 'foodcourtId': 'lama', 'foodcourtLabel': 'Foodcourt Lama'},
+        {'id': 'kantin_2', 'nama': 'Kantin Pak Budi', 'deskripsi': 'Nasi Campur & Lauk Pauk', 'kategori': 'Nasi', 'gambar': 'images/kantin2.jpg', 'rating': 4.9, 'isTop': true, 'waktu': '10-15 mnt', 'totalMenu': 5, 'foodcourtId': 'lama', 'foodcourtLabel': 'Foodcourt Lama'},
+        {'id': 'kantin_3', 'nama': 'Kantin Geprek', 'deskripsi': 'Ayam Geprek & Lalapan', 'kategori': 'Ayam', 'gambar': 'images/kantin3.jpeg', 'rating': 4.7, 'isTop': true, 'waktu': '15-20 mnt', 'totalMenu': 5, 'foodcourtId': 'lama', 'foodcourtLabel': 'Foodcourt Lama'},
+        {'id': 'kantin_4', 'nama': 'Kantin Bakso Mas Jo', 'deskripsi': 'Bakso & Mie Ayam', 'kategori': 'Bakso', 'gambar': 'images/kantin4.jpeg', 'rating': 4.6, 'isTop': false, 'waktu': '10-15 mnt', 'totalMenu': 5, 'foodcourtId': 'lama', 'foodcourtLabel': 'Foodcourt Lama'},
+        {'id': 'kantin_5', 'nama': 'Kantin Minuman Segar', 'deskripsi': 'Jus, Es, & Minuman', 'kategori': 'Minuman', 'gambar': 'images/kantin5.jpg', 'rating': 4.5, 'isTop': false, 'waktu': '5-10 mnt', 'totalMenu': 5, 'foodcourtId': 'lama', 'foodcourtLabel': 'Foodcourt Lama'},
+        {'id': 'kantin_6', 'nama': 'Kantin Seafood Bu Tini', 'deskripsi': 'Seafood Segar & Nasi', 'kategori': 'Seafood', 'gambar': 'images/kantin6.png', 'rating': 4.7, 'isTop': true, 'waktu': '20-25 mnt', 'totalMenu': 5, 'foodcourtId': 'lama', 'foodcourtLabel': 'Foodcourt Lama'},
+        // ── FOODCOURT BARU ──────────────────────────────────
+        {'id': 'kantin_7', 'nama': 'Kantin Snack Corner', 'deskripsi': 'Gorengan & Camilan', 'kategori': 'Snack', 'gambar': 'images/kantin7.jpeg', 'rating': 4.4, 'isTop': false, 'waktu': '5-10 mnt', 'totalMenu': 5, 'foodcourtId': 'baru', 'foodcourtLabel': 'Foodcourt Baru'},
+        {'id': 'kantin_8', 'nama': 'Kantin Nasi Padang', 'deskripsi': 'Masakan Padang Lezat', 'kategori': 'Nasi', 'gambar': 'images/kantin8.jpg', 'rating': 4.9, 'isTop': true, 'waktu': '10-15 mnt', 'totalMenu': 5, 'foodcourtId': 'baru', 'foodcourtLabel': 'Foodcourt Baru'},
+        {'id': 'kantin_9', 'nama': 'Dimsum Station', 'deskripsi': 'Dimsum & Aneka Dumpling', 'kategori': 'Snack', 'gambar': 'images/Dimsum Station.jpg', 'rating': 4.8, 'isTop': true, 'waktu': '10-15 mnt', 'totalMenu': 6, 'foodcourtId': 'baru', 'foodcourtLabel': 'Foodcourt Baru'},
+        {'id': 'kantin_12', 'nama': 'Pos Ketan Legenda', 'deskripsi': 'Ketan & Camilan Tradisional', 'kategori': 'Snack', 'gambar': 'images/Pos Ketan Legenda.jpg', 'rating': 4.5, 'isTop': false, 'waktu': '5-10 mnt', 'totalMenu': 5, 'foodcourtId': 'baru', 'foodcourtLabel': 'Foodcourt Baru'},
+        {'id': 'kantin_13', 'nama': 'Bingxue', 'deskripsi': 'Es Krim & Minuman Kekinian', 'kategori': 'Minuman', 'gambar': 'images/Bingxue.jpeg', 'rating': 4.9, 'isTop': true, 'waktu': '5-10 mnt', 'totalMenu': 6, 'foodcourtId': 'baru', 'foodcourtLabel': 'Foodcourt Baru'},
       ];
 
       for (var k in canteens) {
@@ -658,6 +807,8 @@ class FirestoreService {
           'isTop': k['isTop'],
           'waktu': k['waktu'],
           'totalMenu': k['totalMenu'],
+          'foodcourtId': k['foodcourtId'],
+          'foodcourtLabel': k['foodcourtLabel'],
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
@@ -719,6 +870,30 @@ class FirestoreService {
           {'nama': 'Es Jeruk', 'harga': 6000, 'gambar': 'images/es_jeruk.jpeg', 'kat': 'Minuman', 'desc': 'Es jeruk segar'},
           {'nama': 'Kerupuk', 'harga': 2000, 'gambar': 'images/Kerupuk.jpg', 'kat': 'Snack', 'desc': 'Kerupuk renyah'},
         ],
+        // ── FOODCOURT BARU ───────────────────────────────────
+        'kantin_9': [
+          {'nama': 'Lava Spicy Mayo', 'harga': 40000, 'gambar': 'images/Lava Spicy Mayo.png', 'kat': 'Snack', 'desc': 'Dimsum dengan saus spicy mayo hangat'},
+          {'nama': 'Kaicak Ayam Jamur', 'harga': 35000, 'gambar': 'images/Kaicak Ayam Jamur.png', 'kat': 'Snack', 'desc': 'Kaicak ayam jamur kukus'},
+          {'nama': 'Siewmay Nori Crab Stick', 'harga': 35000, 'gambar': 'images/Siewmay Nori Crab Stick.png', 'kat': 'Snack', 'desc': 'Siomay nori topping kepiting'},
+          {'nama': 'Pangsit Udang Goreng', 'harga': 35000, 'gambar': 'images/Pangsit Udang Goreng.png', 'kat': 'Snack', 'desc': 'Pangsit udang goreng renyah'},
+          {'nama': 'Lumpia Udang Kulit Tahu', 'harga': 35000, 'gambar': 'images/Lumpia Udang Kulit Tahu.png', 'kat': 'Snack', 'desc': 'Lumpia udang bungkus kulit tahu'},
+          {'nama': 'Lumpia Ayam Udang', 'harga': 35000, 'gambar': 'images/Lumpia Ayam Udang.png', 'kat': 'Snack', 'desc': 'Lumpia isi ayam dan udang'},
+        ],
+        'kantin_12': [
+          {'nama': 'Ketan Durian Keju Susu Fla', 'harga': 18000, 'gambar': 'images/Ketan Durian Keju Susu Fla.png', 'kat': 'Snack', 'desc': 'Ketan dengan topping durian, keju, dan susu fla manis'},
+          {'nama': 'Ketan Susu Vla Durian', 'harga': 16000, 'gambar': 'images/Ketan Susu Vla Durian.png', 'kat': 'Snack', 'desc': 'Ketan hangat dengan siraman vla durian and susu kental manis'},
+          {'nama': 'Ketan Susu Fla Nangka', 'harga': 15000, 'gambar': 'images/Ketan Susu Fla Nangka.png', 'kat': 'Snack', 'desc': 'Ketan gurih dengan potongan nangka wangi and fla susu'},
+          {'nama': 'Ketan Pisang + Keju Susu Fla', 'harga': 17000, 'gambar': 'images/Ketan Pisang + Keju Susu Fla.png', 'kat': 'Snack', 'desc': 'Ketan dipadukan dengan pisang manis, parutan keju, and fla susu'},
+          {'nama': 'Ketan Susu Keju Meses', 'harga': 14000, 'gambar': 'images/Ketan Susu Keju Meses.png', 'kat': 'Snack', 'desc': 'Ketan susu dengan taburan keju parut and meses cokelat manis'},
+        ],
+        'kantin_13': [
+          {'nama': 'Milk Tea Cloud Pudding Ice Cream', 'harga': 18000, 'gambar': 'images/Milk Tea Cloud Pudding Ice Cream.png', 'kat': 'Minuman', 'desc': 'Milk tea dengan pudding lembut and ice cream vanilla'},
+          {'nama': 'Pudding Cup (Strawberry, Mango, Peach)', 'harga': 12000, 'gambar': 'images/Pudding Cup (Strawberry, Mango, Peach).png', 'kat': 'Minuman', 'desc': 'Pudding cup dengan aneka rasa buah segar'},
+          {'nama': 'Sanzha Apple', 'harga': 15000, 'gambar': 'images/Sanzha Apple.png', 'kat': 'Minuman', 'desc': 'Minuman teh apel sanzha menyegarkan'},
+          {'nama': 'Egg Waffle Chocolate', 'harga': 16000, 'gambar': 'images/Egg Waffle Chocolate.png', 'kat': 'Snack', 'desc': 'Egg waffle hangat rasa cokelat manis'},
+          {'nama': 'Chocolate Red Bean Sundae', 'harga': 15000, 'gambar': 'images/Chocolate Red Bean Sundae.png', 'kat': 'Minuman', 'desc': 'Es krim sundae cokelat dengan topping red bean'},
+          {'nama': 'Mulberry Bing-Shake', 'harga': 17000, 'gambar': 'images/Mulberry Bing-Shake.png', 'kat': 'Minuman', 'desc': 'Bing-shake mulberry dingin dan segar'},
+        ],
       };
 
       for (var entry in menus.entries) {
@@ -739,8 +914,79 @@ class FirestoreService {
           });
         }
       }
+
+      // Seed mock active orders so canteens are not all quiet (Sepi) on startup
+      final oldPesanan = await _db.collection('pesanan').get();
+      for (var doc in oldPesanan.docs) {
+        await doc.reference.delete();
+      }
+
+      // Also clean up old notifications and reviews to avoid orphaned references
+      final oldNotif = await _db.collection('notifikasi').get();
+      for (var doc in oldNotif.docs) {
+        await doc.reference.delete();
+      }
+
+      final oldUlasan = await _db.collection('ulasan').get();
+      for (var doc in oldUlasan.docs) {
+        await doc.reference.delete();
+      }
+
+      // 3 active orders for Kantin Bu Sari (reaches threshold 3 -> Ramai)
+      for (int i = 0; i < 3; i++) {
+        await _db.collection('pesanan').add({
+          'uid': 'mock_user_1',
+          'pembeliNama': 'Budi Pekerti',
+          'pembeliEmail': 'budi@demo.com',
+          'kantin': 'Kantin Bu Sari',
+          'kantinId': 'kantin_1',
+          'metode': 'Cash',
+          'catatan': 'Pedas sedang',
+          'totalHarga': 12000,
+          'noAntrian': 10 + i,
+          'statusIndex': 1, // Sedang disiapkan (Cooking)
+          'items': [
+            {
+              'nama': 'Soto Ayam',
+              'gambar': 'images/soto_ayam.jpeg',
+              'harga': 12000,
+              'qty': 1,
+              'kantin': 'Kantin Bu Sari',
+            }
+          ],
+          'waktuPesan': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // 4 active orders for Kantin Pak Budi (reaches threshold 4 -> Ramai)
+      for (int i = 0; i < 4; i++) {
+        await _db.collection('pesanan').add({
+          'uid': 'mock_user_2',
+          'pembeliNama': 'Siti Rahma',
+          'pembeliEmail': 'siti@demo.com',
+          'kantin': 'Kantin Pak Budi',
+          'kantinId': 'kantin_2',
+          'metode': 'QRIS',
+          'catatan': 'Nasi setengah',
+          'totalHarga': 15000,
+          'noAntrian': 20 + i,
+          'statusIndex': 1, // Sedang disiapkan (Cooking)
+          'items': [
+            {
+              'nama': 'Nasi Campur',
+              'gambar': 'images/nasi_campur.jpeg',
+              'harga': 15000,
+              'qty': 1,
+              'kantin': 'Kantin Pak Budi',
+            }
+          ],
+          'waktuPesan': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
       
-      debugPrint('Successfully seeded canteens and menu items.');
+      debugPrint('Successfully seeded canteens, menu items, and active orders.');
     } catch (e) {
       debugPrint('seedInitialData error: $e');
     }
@@ -758,11 +1004,9 @@ class FirestoreService {
     try {
       if (_uid == null) throw Exception('User belum login');
 
-      // 1. Ambil data pembeli
       final userDoc = await _db.collection('users').doc(_uid).get();
       final namaPembeli = userDoc.data()?['nama'] ?? 'Pembeli';
 
-      // 2. Cari kantinId berdasarkan nama kantin
       final kantinSnap = await _db
           .collection('kantin')
           .where('nama', isEqualTo: kantinNama)
@@ -775,7 +1019,6 @@ class FirestoreService {
       final kantinDoc = kantinSnap.docs.first;
       final kantinId = kantinDoc.id;
 
-      // 3. Simpan ulasan ke koleksi 'ulasan'
       await _db.collection('ulasan').add({
         'uid': _uid,
         'namaPembeli': namaPembeli,
@@ -787,12 +1030,10 @@ class FirestoreService {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      // 4. Update status pesanan: ulasanDiberikan = true
       await _db.collection('pesanan').doc(pesananId).update({
         'ulasanDiberikan': true,
       });
 
-      // 5. Hitung ulang rating rata-rata kantin
       final ulasanSnap = await _db
           .collection('ulasan')
           .where('kantinId', isEqualTo: kantinId)
@@ -805,7 +1046,6 @@ class FirestoreService {
       }
       double avgRating = count > 0 ? (totalRating / count) : rating;
       
-      // Bulatkan ke 1 desimal
       avgRating = double.parse(avgRating.toStringAsFixed(1));
 
       // 6. Update rating dan totalUlasan di dokumen kantin
@@ -829,5 +1069,25 @@ class FirestoreService {
         .collection('ulasan')
         .where('kantinId', isEqualTo: kantinId)
         .snapshots();
+  }
+
+  // =========================================================
+  // VOUCHER METHODS (Admin)
+  // =========================================================
+  static Stream<List<VoucherModel>> streamAllVouchers() {
+    return _db.collection('vouchers').snapshots().map((snapshot) =>
+        snapshot.docs.map((doc) => VoucherModel.fromJson(doc.id, doc.data())).toList());
+  }
+
+  static Future<void> toggleVoucherActive(String voucherId) async {
+    final docRef = _db.collection('vouchers').doc(voucherId);
+    final snap = await docRef.get();
+    if (!snap.exists) return;
+    final current = snap.get('active') as bool? ?? true;
+    await docRef.update({'active': !current, 'updatedAt': FieldValue.serverTimestamp()});
+  }
+
+  static Future<void> createVoucher(VoucherModel voucher) async {
+    await _db.collection('vouchers').doc(voucher.id).set(voucher.toJson());
   }
 }

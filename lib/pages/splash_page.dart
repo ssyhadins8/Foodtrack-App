@@ -51,6 +51,15 @@ class _SplashPageState extends State<SplashPage>
         .get();
 
     if (!mounted) return;
+
+    final userData = doc.data();
+    if (userData != null && !userData.containsKey('loyaltyPoints')) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'loyaltyPoints': 0});
+    }
+
     final role = doc.data()?['role'] ?? 'pembeli';
     if (role == 'pedagang') {
       Navigator.pushReplacementNamed(

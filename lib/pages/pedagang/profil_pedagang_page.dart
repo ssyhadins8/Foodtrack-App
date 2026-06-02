@@ -4,12 +4,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:foodtrack/theme/app_colors.dart';
 import 'package:foodtrack/theme/premium_background.dart';
 
-class ProfilPedagangPage extends StatelessWidget {
+class ProfilPedagangPage extends StatefulWidget {
   final String namaKantin;
-  const ProfilPedagangPage({super.key, required this.namaKantin});
+  final String kantinId;
+  const ProfilPedagangPage({
+    super.key,
+    required this.namaKantin,
+    required this.kantinId,
+  });
+
+  @override
+  State<ProfilPedagangPage> createState() => _ProfilPedagangPageState();
+}
+
+class _ProfilPedagangPageState extends State<ProfilPedagangPage> {
+  String _rekapFilter = 'Hari Ini';
 
   @override
   Widget build(BuildContext context) {
+    final namaKantin = widget.namaKantin;
     final user = FirebaseAuth.instance.currentUser;
     final email = user?.email ?? '-';
     final nama = user?.displayName ?? email.split('@')[0];
@@ -119,12 +132,35 @@ class ProfilPedagangPage extends StatelessWidget {
                   .where('kantin', isEqualTo: namaKantin)
                   .snapshots(),
               builder: (ctx, snap) {
-                final docs = snap.data?.docs ?? [];
+                var docs = snap.data?.docs ?? [];
+
+                final now = DateTime.now();
+                final startOfToday = DateTime(now.year, now.month, now.day);
+                final startOfMonth = DateTime(now.year, now.month, 1);
+
+                docs = docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final bool matchesKantin = data['kantinId'] == widget.kantinId || data['kantin'] == widget.namaKantin;
+                  if (!matchesKantin) return false;
+
+                  final timestamp = data['waktuPesan'] as Timestamp? ?? data['createdAt'] as Timestamp?;
+                  if (timestamp == null) return false;
+                  final date = timestamp.toDate();
+
+                  if (_rekapFilter == 'Hari Ini') {
+                    return date.isAfter(startOfToday) || date.isAtSameMomentAs(startOfToday);
+                  } else if (_rekapFilter == 'Bulan Ini') {
+                    return date.isAfter(startOfMonth) || date.isAtSameMomentAs(startOfMonth);
+                  }
+                  return true; // 'Semua'
+                }).toList();
+
                 final total = docs.length;
                 final pemasukan = docs.fold<int>(0, (s, d) {
                   final data = d.data() as Map<String, dynamic>;
                   return s + (data['totalHarga'] as int? ?? 0);
                 });
+
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   padding: const EdgeInsets.all(16),
@@ -138,6 +174,44 @@ class ProfilPedagangPage extends StatelessWidget {
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: ['Hari Ini', 'Bulan Ini', 'Semua'].map((filter) {
+                            final isSelected = _rekapFilter == filter;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: ChoiceChip(
+                                label: Text(
+                                  filter,
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                selected: isSelected,
+                                selectedColor: AppColors.primary,
+                                backgroundColor: Colors.grey.shade100,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: BorderSide(
+                                    color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                                  ),
+                                ),
+                                onSelected: (val) {
+                                  if (val) {
+                                    setState(() {
+                                      _rekapFilter = filter;
+                                    });
+                                  }
+                                },
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                       const SizedBox(height: 12),

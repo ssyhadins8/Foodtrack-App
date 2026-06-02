@@ -1,146 +1,146 @@
-# LOGBOOK MINGGUAN MAHASISWA
-> **Mata Kuliah:** Pemrograman Mobile  
-> **Skema Pengerjaan:** Skema A (1 Project Besar - Minggu 4 s/d 16)  
-> **Nama Project:** FoodTrack (Aplikasi Smart Campus Canteen berbasis Flutter & Firebase)  
+# Logbook Mingguan Mahasiswa
+* **Mata Kuliah:** Pemrograman Mobile
+* **Skema Pengerjaan:** Skema A (1 Project Besar - Minggu 4 s/d 16)
+* **Nama Project:** FoodTrack
 
 ---
 
-## MINGGU 4: Penentuan Ide & Approval Dosen
-*   **Progress Minggu Ini:**
-    *   Melakukan survei lapangan terhadap masalah antrean di kantin kampus.
-    *   Merumuskan konsep aplikasi **FoodTrack** dengan model transaksi *Self-Pickup* (ambil sendiri) untuk memotong waktu antre.
-    *   Menyusun pembagian 3 peran pengguna (*Multi-Role*): Pembeli (Mahasiswa), Pedagang (Kantin), dan Admin (Pusat).
-*   **Kendala:** Menentukan cakupan fitur agar aplikasi realistis diselesaikan dalam satu semester namun tetap bernilai tinggi.
-*   **Solusi:** Membatasi fitur pada manajemen menu, pemesanan langsung, status transaksi real-time, dan dashboard administrasi global tanpa sistem kurir pengantaran.
-*   **Rencana Minggu Depan:** Menyusun dokumen proposal formal dan merancang sketsa/wireframe antarmuka UI.
+## Minggu 4: Penentuan Ide dan Persetujuan Dosen
+* **Kemajuan Pekerjaan:**
+  * Melakukan survei awal terkait penumpukan antrean fisik pada kantin kampus.
+  * Merumuskan konsep dasar aplikasi pemesanan makanan berbasis metode Self-Pickup.
+  * Menyusun skema pembagian peran pengguna (Pembeli, Pedagang, dan Admin).
+* **Kendala:** Menentukan batasan fungsionalitas agar proyek dapat diselesaikan tepat waktu namun tetap memenuhi standar akademis.
+* **Solusi:** Membatasi fitur pada manajemen menu, pelacakan status transaksi real-time, dan dashboard administrasi global tanpa sistem kurir pengantaran.
+* **Rencana Kerja Selanjutnya:** Menyusun dokumen proposal awal dan membuat rancangan kawat (wireframe) antarmuka.
 
 ---
 
-## MINGGU 5: Proposal & Desain UI/UX
-*   **Progress Minggu Ini:**
-    *   Menyusun dokumen proposal awal berisi latar belakang, arsitektur sistem, dan target pengerjaan.
-    *   Membuat desain mockup UI/UX menggunakan sistem pewarnaan premium (Gold, Deep Blue, dan Glassmorphism) agar aplikasi terlihat modern dan elegan.
-    *   Merancang diagram alir (*sequence diagram*) untuk integrasi data multi-role.
-*   **Kendala:** Menyelaraskan ukuran layar agar tampilan tetap konsisten di berbagai rasio layar handphone.
-*   **Solusi:** Menggunakan layout responsif dengan persentase padding dinamis serta memanfaatkan widget `LayoutBuilder` dan `SafeArea`.
-*   **Rencana Minggu Depan:** Inisialisasi struktur folder project Flutter, konfigurasi Version Control (Git), dan integrasi Firebase SDK.
+## Minggu 5: Proposal dan Desain UI/UX
+* **Kemajuan Pekerjaan:**
+  * Menyusun dokumen proposal berisi latar belakang masalah, arsitektur sistem, dan target pengerjaan proyek.
+  * Membuat desain mockup antarmuka pengguna dengan sistem pewarnaan terpadu agar tampilan konsisten.
+  * Merancang diagram alir transaksi (sequence diagram) untuk integrasi data multi-role.
+* **Kendala:** Menyelaraskan tata letak antarmuka agar tetap proporsional pada berbagai rasio layar perangkat Android.
+* **Solusi:** Menggunakan tata letak responsif menggunakan persentase padding dinamis serta memanfaatkan widget SafeArea.
+* **Rencana Kerja Selanjutnya:** Inisialisasi struktur direktori proyek Flutter, pembuatan repositori Git, dan konfigurasi awal Firebase SDK.
 
 ---
 
-## MINGGU 6: Inisialisasi Project & Integrasi Firebase
-*   **Progress Minggu Ini:**
-    *   Membuat repositori Git dan melakukan inisialisasi project Flutter baru.
-    *   Mengatur struktur folder yang bersih (*Clean Architecture*): `pages/`, `services/`, `theme/`, dan `widgets/`.
-    *   Mengintegrasikan Firebase Core dan Firebase Auth untuk sistem login/registrasi pengguna.
-*   **Kendala:** Terjadi *dependency conflict* antara versi Firebase Core dengan SDK Flutter terinstal.
-*   **Solusi:** Menyelesaikan konflik dependensi dengan menyesuaikan konfigurasi Gradle dan mengunci versi paket stabil di `pubspec.yaml`.
-*   **Rencana Minggu Depan:** Membuat modul autentikasi (Login, Register, Splash Screen) lengkap dengan validasi form input.
+## Minggu 6: Inisialisasi Proyek dan Integrasi Firebase
+* **Kemajuan Pekerjaan:**
+  * Membuat repositori Git lokal dan melakukan inisialisasi proyek Flutter baru.
+  * Mengatur struktur direktori proyek: pages, services, theme, dan models.
+  * Mengintegrasikan pustaka Firebase Core dan Firebase Auth ke dalam file konfigurasi proyek.
+* **Kendala:** Terjadi ketidaksesuaian versi pustaka Firebase dengan versi Gradle yang terpasang pada modul Android.
+* **Solusi:** Menyesuaikan konfigurasi file build.gradle dan menyelaraskan versi dependensi pada berkas pubspec.yaml.
+* **Rencana Kerja Selanjutnya:** Membangun modul autentikasi awal (Login dan Signup) lengkap dengan validasi form masukan.
 
 ---
 
-## MINGGU 7: Implementasi Autentikasi & Dynamic Routing
-*   **Progress Minggu Ini:**
-    *   Membangun halaman Login dan Signup dengan form validation (validasi email kosong, password kurang dari 6 karakter).
-    *   Membuat halaman Splash Screen yang mendeteksi session aktif: jika pengguna sudah login sebelumnya, aplikasi langsung mengarahkan ke halaman Beranda (*auto-login*).
-    *   Mengimplementasikan dynamic routing dan named routes di berkas `main.dart`.
-*   **Kendala:** Menghubungkan role user (Pembeli, Pedagang, Admin) dari Firestore saat proses registrasi.
-*   **Solusi:** Membuat koleksi `users` di Cloud Firestore yang menyimpan detail akun termasuk string `role`, lalu menggunakannya sebagai rujukan rute beranda setelah login sukses.
-*   **Rencana Minggu Depan:** Membangun Dashboard Admin dan fitur CRUD (Create, Read, Update, Delete) data Kantin global.
+## Minggu 7: Implementasi Autentikasi dan Sistem Rute Dinamis
+* **Kemajuan Pekerjaan:**
+  * Membangun halaman login dan registrasi dengan validasi input (pengecekan format email dan minimal panjang kata sandi).
+  * Membuat modul splash screen yang mendeteksi session login aktif untuk memfasilitasi auto-login.
+  * Mengimplementasikan named routes pada berkas main.dart untuk mempermudah navigasi.
+* **Kendala:** Menghubungkan pembacaan role pengguna (Pembeli/Pedagang/Admin) sesaat setelah login berhasil dilakukan.
+* **Solusi:** Menyimpan tipe role pengguna di dalam dokumen koleksi users di Cloud Firestore, lalu membacanya untuk menentukan rute halaman beranda yang sesuai.
+* **Rencana Kerja Selanjutnya:** Membangun Dashboard Admin dan fungsi CRUD (Create, Read, Update, Delete) data kantin secara global.
 
 ---
 
-## MINGGU 8: Progress Review (Evaluasi Tahap 1)
-*   **Progress Minggu Ini:**
-    *   Membangun **Dashboard Admin Premium** lengkap dengan filter pencarian real-time.
-    *   Mengimplementasikan fungsi CRUD Kantin secara penuh di database Firestore langsung dari layar Admin.
-    *   Mempersiapkan demonstrasi kemajuan tahap 1 di hadapan dosen pengampu (menunjukkan login multi-role dan CRUD admin).
-*   **Kendala:** Melakukan perubahan data kantin secara real-time pada beranda pembeli tanpa perlu memuat ulang aplikasi.
-*   **Solusi:** Mengganti pembacaan data satu kali (*FutureGet*) menggunakan stream data dinamis (*StreamBuilder*) agar sinkronisasi terjadi dalam hitungan milidetik secara otomatis.
-*   **Rencana Minggu Depan:** Membangun halaman utama Pembeli (Beranda), bilah kategori interaktif, dan integrasi API cuaca eksternal.
+## Minggu 8: Review Kemajuan Proyek (Evaluasi Tahap 1)
+* **Kemajuan Pekerjaan:**
+  * Menyelesaikan dashboard administrasi untuk melakukan CRUD data kantin global.
+  * Menambahkan fitur filter pencarian real-time pada daftar kantin untuk sisi administrator.
+  * Mempersiapkan berkas dan demonstrasi aplikasi untuk evaluasi tahap pertama oleh tim dosen pengampu.
+* **Kendala:** Pembaruan data kantin yang dimodifikasi oleh admin tidak langsung tecermin di halaman pembeli tanpa memuat ulang aplikasi.
+* **Solusi:** Mengubah metode pengambilan data sekali menggunakan Future menjadi langganan aliran data dinamis menggunakan StreamBuilder.
+* **Rencana Kerja Selanjutnya:** Membangun beranda pembeli, bilah penyaringan kategori menu, dan integrasi API cuaca eksternal.
 
 ---
 
-## MINGGU 9: Integrasi API Cuaca Kampus & Fitur Beranda Pembeli
-*   **Progress Minggu Ini:**
-    *   Mendesain halaman Beranda Pembeli yang mewah dengan banner promo dinamis.
-    *   Mengintegrasikan API cuaca kampus menggunakan `http` request untuk mendeteksi cuaca terkini dan menampilkan rekomendasi pemesanan makanan.
-    *   Membangun menu filter kategori horizontal (Soto, Nasi, Ayam, Minuman, Snack, Seafood).
-*   **Kendala:** Data cuaca terkadang lambat dimuat jika koneksi internet tidak stabil.
-*   **Solusi:** Menambahkan widget *shimmer/loading indicator* dan melengkapi penanganan error (*try-catch*) agar aplikasi tidak mengalami crash saat API down.
-*   **Rencana Minggu Depan:** Mengimplementasikan State Management Provider untuk sistem keranjang belanja (*shopping cart*) real-time.
+## Minggu 9: Integrasi API Cuaca dan Beranda Pembeli
+* **Kemajuan Pekerjaan:**
+  * Mendesain tata letak halaman beranda pembeli dengan banner promosi dan daftar kantin terpopuler.
+  * Mengintegrasikan API cuaca eksternal (Open-Meteo) untuk menyajikan data temperatur terkini di lingkungan kampus.
+  * Menyediakan fitur rekomendasi menu otomatis yang disesuaikan dengan kondisi suhu udara terkini.
+* **Kendala:** Pemanggilan API cuaca dapat memakan waktu lama apabila koneksi internet lambat.
+* **Solusi:** Menambahkan indikator pemuatan data dan menggunakan blok try-catch untuk mencegah crash ketika API tidak merespons.
+* **Rencana Kerja Selanjutnya:** Mengimplementasikan State Management Provider untuk sistem pengelolaan keranjang belanja.
 
 ---
 
-## MINGGU 10: State Management Provider & Keranjang Belanja
-*   **Progress Minggu Ini:**
-    *   Membuat berkas `cart_provider.dart` menggunakan paket `provider` untuk mengelola data keranjang belanja secara global.
-    *   Membangun halaman Detail Kantin yang menampilkan daftar menu dinamis ditarik dari Firestore.
-    *   Menghubungkan tombol tambah/kurang item menu dengan Provider sehingga jumlah barang dan harga terupdate otomatis di seluruh layar aplikasi.
-*   **Kendala:** Mengatur agar badge notifikasi jumlah barang di bawah navigasi bar ikut terupdate secara instan.
-*   **Solusi:** Membungkus widget Bottom Navigation Bar dengan `Consumer<CartProvider>` agar secara reaktif merender ulang badge saat ada perubahan item.
-*   **Rencana Minggu Depan:** Merancang layar Checkout Premium lengkap dengan kalkulasi biaya dan pilihan metode pembayaran.
+## Minggu 10: State Management Provider dan Keranjang Belanja
+* **Kemajuan Pekerjaan:**
+  * Membuat berkas cart_provider.dart menggunakan paket provider sebagai manajemen state terpusat.
+  * Menyusun halaman detail kantin yang memuat daftar menu dinamis dari Firestore.
+  * Menghubungkan tombol tambah dan kurang item menu dengan Provider agar kalkulasi harga total berjalan secara otomatis.
+* **Kendala:** Pembaruan indikator jumlah item pada ikon keranjang belanja tidak berubah secara instan.
+* **Solusi:** Membungkus widget keranjang belanja menggunakan Consumer dari Provider agar melakukan render ulang secara reaktif.
+* **Rencana Kerja Selanjutnya:** Mendesain halaman checkout pesanan lengkap dengan rincian biaya transaksi.
 
 ---
 
-## MINGGU 11: Implementasi Checkout & Algoritma Antrean
-*   **Progress Minggu Ini:**
-    *   Membangun halaman Checkout yang menyajikan rincian biaya transparan (Subtotal, Pajak, Biaya Layanan, Total Akhir).
-    *   Menambahkan input catatan kustom untuk pedagang dan selektor metode pembayaran interaktif (QRIS / Tunai).
-    *   Membuat mekanisme pembuatan nomor antrean unik otomatis setiap kali transaksi berhasil dibuat.
-*   **Kendala:** Mengunci input catatan agar tidak dikirim dalam kondisi kosong atau berkarakter tidak valid.
-*   **Solusi:** Menerapkan validasi regex dasar pada kolom input catatan sebelum transaksi diproses ke Firestore.
-*   **Rencana Minggu Depan:** Membangun Dashboard khusus untuk Pedagang (Merchant) guna memproses pesanan masuk secara real-time.
+## Minggu 11: Implementasi Checkout dan Perhitungan Antrean
+* **Kemajuan Pekerjaan:**
+  * Membangun halaman checkout yang menyajikan transparansi biaya (subtotal, biaya layanan, pajak, dan total akhir).
+  * Menambahkan fitur input catatan pesanan untuk pedagang serta selektor metode pembayaran (Tunai atau QRIS).
+  * Mengimplementasikan generator nomor antrean transaksi yang unik saat pesanan berhasil disimpan.
+* **Kendala:** Membatasi panjang teks catatan pembeli agar tidak mengganggu tata letak dokumen pesanan.
+* **Solusi:** Menambahkan batas maksimal karakter pada kolom input catatan sebelum data dikirim ke Firestore.
+* **Rencana Kerja Selanjutnya:** Membangun dashboard pedagang untuk memproses transaksi masuk secara real-time.
 
 ---
 
-## MINGGU 12: Dashboard Pedagang & Pelacakan Transaksi Real-time
-*   **Progress Minggu Ini:**
-    *   Membangun **Dashboard Pedagang (Merchant)** yang menampilkan daftar pesanan masuk berdasarkan antrean real-time dari Firestore.
-    *   Mengimplementasikan perubahan status pesanan dinamis oleh pedagang (Diproses -> Siap Diambil -> Selesai).
-    *   Membangun halaman Pelacakan Status Pesanan bagi pembeli yang terhubung langsung secara real-time menggunakan Cloud Firestore Stream.
-*   **Kendala:** Membedakan pesanan masuk berdasarkan kantin masing-masing pedagang agar pedagang tidak melihat pesanan dari kantin lain.
-*   **Solusi:** Melakukan query penapisan (*filtering*) pesanan di Firestore menggunakan `kantinId` unik yang terikat pada akun profil pedagang.
-*   **Rencana Minggu Depan:** Membangun fitur CRUD Menu Makanan secara mandiri bagi pedagang agar dapat memperbarui menu mereka sendiri.
+## Minggu 12: Dashboard Pedagang dan Pelacakan Pesanan Real-time
+* **Kemajuan Pekerjaan:**
+  * Menyelesaikan dashboard pedagang yang memuat pesanan aktif berdasarkan urutan nomor antrean.
+  * Menambahkan fungsi pembaruan status pengerjaan makanan oleh pedagang (Diproses -> Siap Diambil).
+  * Membangun halaman pelacakan status pesanan real-time untuk sisi pembeli menggunakan Firestore Streams.
+* **Kendala:** Pedagang dapat melihat pesanan yang masuk ke kantin lain apabila query tidak dibatasi.
+* **Solusi:** Menerapkan filter query berdasarkan parameter kantinId yang terasosiasi dengan akun masuk pedagang.
+* **Rencana Kerja Selanjutnya:** Menyusun fitur pengelolaan menu makanan secara mandiri untuk masing-masing pedagang.
 
 ---
 
-## MINGGU 13: CRUD Menu Pedagang & Ulasan Rating
-*   **Progress Minggu Ini:**
-    *   Menyelesaikan fitur CRUD Menu Makanan bagi Pedagang (menambah menu baru, memperbarui harga/stok, mengubah status ketersediaan, serta menghapus menu).
-    *   Membangun sistem pemberian ulasan (rating bintang dan komentar tertulis) oleh pembeli setelah pesanan selesai.
-    *   Mekanisme pembaruan otomatis rating rata-rata kantin di Firestore saat ulasan baru masuk.
-*   **Kendala:** Formula kalkulasi rating rata-rata dapat menghasilkan angka desimal yang terlalu panjang di database.
-*   **Solusi:** Menerapkan fungsi pembulatan angka desimal (*double.parse(value.toStringAsFixed(1))*) sebelum menyimpannya kembali ke database.
-*   **Rencana Minggu Depan:** Mengaktifkan sistem Auto-Seeding database untuk mempermudah demonstrasi aplikasi serta merapikan visual dan navigasi.
+## Minggu 13: Pengelolaan Menu Pedagang dan Sistem Ulasan
+* **Kemajuan Pekerjaan:**
+  * Membangun halaman manajemen menu bagi pedagang untuk menambah, mengubah harga/stok, dan menghapus menu makanan.
+  * Mengimplementasikan fitur pemberian ulasan (rating bintang dan komentar tertulis) oleh pembeli setelah pesanan selesai.
+  * Menyusun fungsi kalkulasi otomatis rating rata-rata kantin di Firestore saat ulasan baru tersimpan.
+* **Kendala:** Perhitungan desimal rating rata-rata menghasilkan deret desimal yang terlalu panjang di Firestore.
+* **Solusi:** Menerapkan pembulatan desimal menggunakan fungsi toStringAsFixed(1) sebelum memperbarui dokumen kantin.
+* **Rencana Kerja Selanjutnya:** Mengaktifkan inisialisasi data otomatis (database seeder) dan merapikan komponen antarmuka.
 
 ---
 
-## MINGGU 14: Pembersihan Database, Perbaikan Bug, & Layout Sidebar
-*   **Progress Minggu Ini:**
-    *   Mengembangkan sistem **Collapsible Sidebar Widget** pada layar lebar agar aplikasi responsif dan konsisten saat diuji di layar desktop oleh dosen.
-    *   Membuat fitur deteksi aset usang di `seedInitialData()` agar jika ada pembaruan gambar menu di masa mendatang, database akan terupdate otomatis secara bersih.
-    *   Menghapus berkas duplikat yang tidak terpakai guna merapikan struktur file project.
-*   **Kendala:** Ditemukan *bottom overflow error* pada layout sidebar saat dijalankan di layar berukuran sempit.
-*   **Solusi:** Membungkus widget sidebar dalam `SingleChildScrollView` and menambahkan logika responsif untuk mengubah teks menu menjadi ikon saja saat lebar layar kurang dari 750 piksel.
-*   **Rencana Minggu Depan:** Melakukan Widget Testing komprehensif dan uji kestabilan fungsional (*smoke testing*) aplikasi.
+## Minggu 14: Perbaikan Bug Antarmuka dan Optimasi Tata Letak
+* **Kemajuan Pekerjaan:**
+  * Menambahkan Collapsible Sidebar Navigation pada admin dashboard saat aplikasi dijalankan pada layar tablet/desktop.
+  * Memperbaiki bug bottom overflow pada halaman detail pesanan dengan menyesuaikan batas tinggi SliverAppBar.
+  * Menghapus beberapa berkas kode program cadangan yang sudah tidak digunakan untuk merapikan struktur file.
+* **Kendala:** Pilihan tipe diskon pada form promo pedagang mengalami overflow horizontal pada perangkat mobile dengan layar sempit.
+* **Solusi:** Mengubah struktur tata letak baris (Row) menjadi Wrap agar ChoiceChips tersusun secara responsif ke bawah.
+* **Rencana Kerja Selanjutnya:** Melakukan pengujian widget terautomasi dan penyusunan berkas rilis aplikasi.
 
 ---
 
-## MINGGU 15: Widget Testing, Bug Fixing, & Finalisasi Build (APK)
-*   **Progress Minggu Ini:**
-    *   Menulis uji terautomasi (*Widget Testing*) untuk memverifikasi alur halaman Onboarding dan login tanpa bug.
-    *   Memperbaiki tombol "Lihat Semua" di bagian terpopuler beranda pembeli agar secara interaktif menyaring 3 kantin terbaik berdasarkan rating tertinggi dan melakukan *smooth scrolling* otomatis.
-    *   Melakukan build file produksi Android (**APK**) menggunakan perintah `flutter build apk --release`.
-*   **Kendala:** Ukuran file APK awal terlalu besar karena menyertakan aset gambar resolusi tinggi yang belum terkompresi.
-*   **Solusi:** Melakukan kompresi aset gambar di folder `images/` dan menjalankan pembersihan build cache menggunakan `flutter clean` sebelum melakukan build ulang.
-*   **Rencana Minggu Depan:** Mempersiapkan file presentasi, video demo berdurasi kurang dari 5 menit, dan melakukan latihan demo live coding.
+## Minggu 15: Widget Testing, Finalisasi Bug, dan Pembuatan APK
+* **Kemajuan Pekerjaan:**
+  * Menulis berkas pengujian unit/widget pada test/widget_test.dart untuk memverifikasi alur halaman onboarding.
+  * Melakukan build versi produksi aplikasi ke dalam format APK Android menggunakan perintah flutter build apk --release.
+  * Memperbaiki navigasi tombol lihat semua beranda pembeli agar menyaring kantin dengan rating terbaik secara interaktif.
+* **Kendala:** Ukuran file APK terdeteksi terlalu besar karena aset gambar resolusi tinggi belum dikompresi.
+* **Solusi:** Melakukan kompresi terhadap aset gambar pada direktori images/ sebelum proses kompilasi rilis dijalankan.
+* **Rencana Kerja Selanjutnya:** Menyiapkan laporan akhir, materi presentasi, dan video demonstrasi sistem.
 
 ---
 
-## MINGGU 16: Evaluasi Akhir & Presentasi Proyek UAS
-*   **Progress Minggu Ini:**
-    *   Menyusun laporan akhir proyek secara sistematis berisi arsitektur sistem, skema database, dan panduan penggunaan.
-    *   Mengunggah seluruh kode sumber terbaru ke repositori Git kampus.
-    *   Menjalankan presentasi final di depan tim dosen pengampu, mendemonstrasikan integrasi multi-role real-time secara langsung (*live demo*), dan menjawab pertanyaan teknis seputar arsitektur kode dengan sukses.
-*   **Kendala:** Tidak ada kendala berarti karena semua persiapan teknis, uji widget, dan dokumen pendukung sudah siap secara matang.
-*   **Solusi:** Presentasi berjalan lancar dan seluruh fitur utama berfungsi dengan sempurna tanpa crash.
+## Minggu 16: Evaluasi Akhir Proyek UAS
+* **Kemajuan Pekerjaan:**
+  * Menyusun laporan akhir proyek secara sistematis berisi diagram sistem, skema database, dan panduan pemasangan.
+  * Mengunggah seluruh kode sumber terbaru ke repositori Git yang ditentukan.
+  * Melakukan presentasi final dan demonstrasi integrasi transaksi multi-role di hadapan tim dosen pengampu.
+* **Kendala:** Tidak ada kendala teknis yang dihadapi selama evaluasi akhir karena persiapan sudah dilakukan secara menyeluruh.
+* **Solusi:** Proyek dinilai berjalan dengan stabil dan seluruh fungsionalitas utama terbukti terintegrasi secara real-time.

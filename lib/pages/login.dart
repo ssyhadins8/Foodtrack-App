@@ -6,7 +6,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:foodtrack/theme/app_colors.dart';
 import 'package:foodtrack/widgets/role_selector_dialog.dart';
 import 'package:foodtrack/widgets/kantin_selector_dialog.dart';
+import 'package:foodtrack/widgets/app_snack.dart';
 import 'package:foodtrack/services/google_sign_in_config.dart';
+
 
 class LogIn extends StatefulWidget {
   const LogIn({super.key});
@@ -29,27 +31,11 @@ class _LogInState extends State<LogIn> {
   }
 
   void _snack(String msg, {bool error = true}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              error ? Icons.error_rounded : Icons.check_circle_rounded,
-              color: Colors.white,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: Text(msg)),
-          ],
-        ),
-        backgroundColor: error ? AppColors.danger : AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    // Use global helper for consistent UI feedback
+    showAppSnack(context, msg, error: error);
   }
+
+  
 
   // ✅ FIX: simpanUserBaru langsung di sini, tidak perlu FirestoreService
   Future<void> _simpanUserBaru({
@@ -62,6 +48,7 @@ class _LogInState extends State<LogIn> {
       'email': email,
       'nama': nama,
       'role': 'pembeli',
+      'loyaltyPoints': 0,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -109,6 +96,14 @@ class _LogInState extends State<LogIn> {
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/home');
         return;
+      }
+
+      final userData = doc.data();
+      if (userData != null && !userData.containsKey('loyaltyPoints')) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .update({'loyaltyPoints': 0});
       }
 
       final role = doc.data()?['role'] ?? 'pembeli';
@@ -423,7 +418,7 @@ class _LogInState extends State<LogIn> {
                                 validator: (value) {
                                   if (value == null || value.isEmpty)
                                     return 'Email harus diisi!';
-                                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                                  final emailRegex = RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$');
                                   if (!emailRegex.hasMatch(value))
                                     return 'Format email tidak valid';
                                   return null;
@@ -498,44 +493,6 @@ class _LogInState extends State<LogIn> {
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 15,
                                                 letterSpacing: 1)))),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: const StadiumBorder(),
-                                  side: BorderSide(color: Colors.grey.shade300, width: 1.2),
-                                  backgroundColor: Colors.white,
-                                  elevation: 0,
-                                ),
-                                icon: Image.asset('images/google.png', height: 22),
-                                label: const Text(
-                                  'Lanjutkan dengan Google',
-                                  style: TextStyle(
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                onPressed: _loading ? null : _loginWithGoogle,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Row(children: [
-                              Expanded(
-                                  child: Divider(
-                                      color: Colors.grey.shade200)),
-                               const Padding(
-                                   padding: EdgeInsets.symmetric(horizontal: 12),
-                                   child: Text('atau',
-                                       style: const TextStyle(
-                                           color: Color(0xFFBDBDBD),
-                                           fontSize: 12))),
-                              Expanded(
-                                  child: Divider(
-                                      color: Colors.grey.shade200)),
-                            ]),
                             const SizedBox(height: 16),
                             Center(
                               child: GestureDetector(
@@ -615,79 +572,6 @@ class _LogInState extends State<LogIn> {
     );
   }
 
-  // ---------- GOOGLE SIGN‑IN LOGIC ----------
-  Future<void> _loginWithGoogle() async {
-    setState(() => _loading = true);
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignInConfig.getGoogleSignIn().signIn();
-      if (googleUser == null) return; // cancelled
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      final UserCredential cred = await FirebaseAuth.instance.signInWithCredential(credential);
-      final uid = cred.user?.uid;
-      if (uid == null) return;
 
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (!doc.exists) {
-        // New user: ask role
-        final role = await showDialog<String>(
-          context: context,
-          builder: (_) => RoleSelectorDialog(),
-        );
-        if (role == null) return;
-        Map<String, dynamic> newData = {
-          'uid': uid,
-          'email': cred.user?.email ?? '',
-          'nama': cred.user?.displayName ?? cred.user?.email?.split('@')[0] ?? '',
-          'role': role,
-          'createdAt': FieldValue.serverTimestamp(),
-        };
-        if (role == 'pedagang') {
-          final selectedKantin = await showDialog<String>(
-            context: context,
-            builder: (_) => KantinSelectorDialog(),
-          );
-          if (selectedKantin != null) {
-            newData.addAll({
-              'namaKantin': selectedKantin,
-              'kantinId': selectedKantin.toLowerCase().replaceAll(' ', '_'),
-            });
-          }
-        }
-        await FirebaseFirestore.instance.collection('users').doc(uid).set(newData);
-        _navigateByRole(role, newData);
-        return;
-      }
-      final role = doc.data()?['role'] ?? 'pembeli';
-      _navigateByRole(role, doc.data() ?? {});
-    } on FirebaseAuthException catch (e) {
-      _snack('Google login gagal: ${e.message ?? e.code}');
-    } catch (e) {
-      _snack('Terjadi kesalahan: $e');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  void _navigateByRole(String role, Map<String, dynamic> data) {
-    if (!mounted) return;
-    if (role == 'admin') {
-      Navigator.pushReplacementNamed(context, '/home_admin');
-    } else if (role == 'pedagang') {
-      Navigator.pushReplacementNamed(
-        context,
-        '/home_pedagang',
-        arguments: {
-          'namaKantin': data['namaKantin'] ?? 'Kantin Saya',
-          'kantinId': data['kantinId'] ?? '',
-        },
-      );
-    } else {
-      Navigator.pushReplacementNamed(context, '/home');
-    }
-  }
 
 }

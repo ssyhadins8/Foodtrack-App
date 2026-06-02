@@ -1,61 +1,60 @@
-# 📘 BLUEPRINT LAPORAN AKHIR PROYEK UAS
-> **Mata Kuliah:** Pemrograman Mobile  
-> **Nama Aplikasi:** FoodTrack  
-> **Skema:** Skema A - 1 Project Besar (PjBL)  
+# Blueprint Laporan Akhir Proyek UAS
+* **Mata Kuliah:** Pemrograman Mobile
+* **Nama Aplikasi:** FoodTrack
+* **Skema:** Skema A - 1 Project Besar (PjBL)
 
-Laporan ini dirancang untuk memenuhi **100% Kriteria Penilaian Laporan Akhir UAS**. Silakan salin draf terperinci ini ke dalam format template dokumen kampus Anda (.docx / .pdf).
+Dokumen ini merupakan draf sistematika Laporan Akhir UAS Pemrograman Mobile yang dirancang untuk memenuhi kriteria penilaian akademik. Dokumen ini dapat dipindahkan ke dalam format dokumen resmi (.docx / .pdf) sesuai template yang ditentukan institusi.
 
 ---
 
-## 📂 BAB I: PENDAHULUAN
+## Bab I: Pendahuluan
 
 ### 1.1 Latar Belakang Masalah
-Kantin kampus merupakan pusat aktivitas mahasiswa saat jam istirahat kuliah. Namun, fenomena antrean panjang pada counter pemesanan makanan seringkali menjadi masalah klasik. Mahasiswa kehilangan banyak waktu produktif hanya untuk mengantre, sementara pedagang kantin kesulitan mengelola pesanan masuk di kala jam sibuk, yang seringkali menyebabkan kesalahan pencatatan pesanan atau ketidakakuratan perhitungan antrean.
+Kantin kampus merupakan fasilitas vital untuk mendukung kebutuhan harian mahasiswa dan staf. Namun, pada jam istirahat kuliah, sering terjadi penumpukan antrean fisik yang panjang pada counter pemesanan makanan. Mahasiswa kehilangan banyak waktu produktif hanya untuk mengantre, sementara pedagang kantin kesulitan mengelola pesanan secara manual di saat jam sibuk. Hal ini berpotensi memicu kesalahan pencatatan pesanan atau ketidakakuratan perhitungan waktu tunggu pelanggan.
 
-### 1.2 Solusi yang Ditawarkan (FoodTrack)
-**FoodTrack** hadir sebagai solusi digital end-to-end terpadu berbentuk aplikasi mobile multi-role berbasis Flutter dan Firebase. Dengan mengadopsi model **Self-Pickup (Ambil Sendiri)**, pembeli dapat memesan makanan dari mana saja (misalnya dari kelas sebelum kuliah selesai), memantau estimasi waktu pengerjaan, dan langsung mengambil makanan ketika status pesanan berubah menjadi "Siap Diambil". 
+### 1.2 Solusi yang Ditawarkan
+FoodTrack dirancang sebagai aplikasi mobile berbasis Flutter dan Firebase yang mengusung metode transaksi Self-Pickup (ambil sendiri). Melalui sistem ini, pembeli dapat memesan makanan dari mana saja tanpa harus mengantre secara fisik di depan stan kantin. Pembeli dapat memantau estimasi waktu pengerjaan secara real-time dan mengambil pesanan langsung ketika status pengerjaan telah dinyatakan selesai oleh pedagang.
 
-### 1.3 Pembagian Peran Pengguna (Multi-Role)
-Aplikasi mendukung 3 hak akses pengguna secara dinamis:
-1.  **Pembeli (Mahasiswa/Karyawan):** Memiliki antarmuka premium untuk mencari kantin, memilih menu, menyusun keranjang, melakukan checkout mandiri, dan melacak pesanan secara real-time.
-2.  **Pedagang (Merchant):** Dashboard pengerjaan makanan real-time untuk mengubah status pesanan (Diproses $\rightarrow$ Siap Diambil $\rightarrow$ Selesai) serta manajemen CRUD menu mandiri.
-3.  **Admin:** Otoritas pusat untuk melakukan CRUD data kantin global serta pemantauan ekosistem kantin secara terpusat.
+### 1.3 Pembagian Peran Pengguna (Multi-Role Access)
+Aplikasi membagi hak akses pengguna menjadi tiga peran dinamis:
+1. **Pembeli:** Berfungsi mencari kantin, memilih menu, menyusun keranjang belanja, melakukan checkout, dan melacak status pesanan secara real-time.
+2. **Pedagang:** Panel pengelolaan pesanan untuk memperbarui status pengerjaan makanan secara real-time serta melakukan manajemen menu mandiri.
+3. **Admin:** Otoritas pusat untuk melakukan manajemen data kantin global secara terpusat serta memantau statistik aktivitas transaksi.
 
 ---
 
-## 🏗️ BAB II: ARSITEKTUR & DIAGRAM SISTEM
+## Bab II: Arsitektur dan Diagram Sistem
 
-### 2.1 Arsitektur Aplikasi (Service-Provider MVVM)
-FoodTrack dibangun menggunakan pola desain **MVVM (Model-View-ViewModel)** yang bersih, terbagi atas tiga lapisan:
-1.  **Views (User Interface):** Ditangani oleh halaman-halaman Flutter di direktori `lib/pages/` (menggunakan Google Fonts Poppins, Gradients, dan micro-interactions).
-2.  **ViewModels (State Management):** Dikelola oleh `CartProvider` menggunakan paket `provider` untuk mengelola status keranjang belanja dan interaksi jumlah item secara reaktif.
-3.  **Models & Services (Data Layer):** Berada di `firestore_service.dart`, menangani sinkronisasi data real-time dengan Cloud Firestore melalui *Websocket Streams* (`snapshots()`).
+### 2.1 Pola Arsitektur Aplikasi
+Aplikasi ini mengadopsi pola desain Model-View-ViewModel (MVVM) yang membagi kode program menjadi tiga lapisan utama:
+1. **Views (Lapisan Antarmuka):** Diimplementasikan melalui widget Flutter di direktori `lib/pages/` menggunakan pustaka komponen standar.
+2. **ViewModels (Lapisan State):** Dikelola oleh `CartProvider` menggunakan paket `provider` untuk menangani status data keranjang belanja secara reaktif.
+3. **Models & Services (Lapisan Data):** Berada di direktori `lib/services/` untuk mengurus pertukaran data real-time dengan Cloud Firestore menggunakan snapshots.
 
-### 2.2 Diagram Aliran Transaksi Real-time (Sequence Diagram)
-*(Visualisasikan sequence diagram ini pada slide presentasi Anda menggunakan diagram Mermaid di README)*
+### 2.2 Diagram Alur Transaksi (Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Pembeli as 👤 Pembeli (Mahasiswa)
-    actor Pedagang as 👨‍🍳 Pedagang (Merchant)
-    participant DB as 🔥 Cloud Firestore NoSQL
+    actor Pembeli as Pembeli (Mahasiswa)
+    actor Pedagang as Pedagang (Merchant)
+    participant DB as Cloud Firestore NoSQL
 
-    Pembeli->>Pembeli: Tambah makanan ke Keranjang (Provider)
-    Pembeli->>Pembeli: Isi Catatan Kustom & Metode Bayar
-    Pembeli->>DB: Simpan Pesanan Baru (Status: Antre)
-    DB-->>Pedagang: Notifikasi Pesanan Baru (Stream Listener)
-    Pedagang->>DB: Ubah Status ("Diproses" -> "Siap Diambil")
-    DB-->>Pembeli: Status Terupdate di Layar Pelacakan
-    Pembeli->>Pedagang: Ambil makanan di counter kantin
-    Pedagang->>DB: Selesaikan Transaksi (Status: Selesai)
+    Pembeli->>Pembeli: Menambahkan makanan ke keranjang belanja (Provider)
+    Pembeli->>Pembeli: Mengisi catatan pesanan dan metode bayar
+    Pembeli->>DB: Menyimpan pesanan baru (Status: Antre)
+    DB-->>Pedagang: Mengirim notifikasi pesanan baru (Stream Listener)
+    Pedagang->>DB: Mengubah status pesanan (Diproses -> Siap Diambil)
+    DB-->>Pembeli: Status terupdate secara real-time di layar pelacakan
+    Pembeli->>Pedagang: Mengambil makanan di stan kantin
+    Pedagang->>DB: Mengubah status transaksi (Status: Selesai)
 ```
 
 ---
 
-## 🗄️ BAB III: SKEMA DATABASE CLOUD FIRESTORE
+## Bab III: Skema Database Cloud Firestore
 
-Aplikasi menggunakan database NoSQL **Cloud Firestore**. Berikut adalah struktur dokumen JSON utama:
+Struktur penyimpanan data NoSQL Cloud Firestore dibagi menjadi beberapa koleksi utama sebagai berikut:
 
 ### 3.1 Koleksi `users` (Manajemen Pengguna)
 ```json
@@ -63,14 +62,14 @@ Aplikasi menggunakan database NoSQL **Cloud Firestore**. Berikut adalah struktur
   "uid": "USER_ID_AUTH",
   "email": "mahasiswa@kampus.ac.id",
   "nama": "Adinda",
-  "role": "Pembeli", // Pembeli / Pedagang / Admin
-  "namaKantin": "", // Terisi nama kantin jika role adalah Pedagang
+  "role": "Pembeli",
+  "namaKantin": "",
   "kantinId": "",
   "createdAt": "Timestamp"
 }
 ```
 
-### 3.2 Koleksi `kantin` (Manajemen CRUD Kantin Global)
+### 3.2 Koleksi `kantin` (Data Kantin Global)
 ```json
 {
   "id": "kantin_4",
@@ -85,7 +84,7 @@ Aplikasi menggunakan database NoSQL **Cloud Firestore**. Berikut adalah struktur
 }
 ```
 
-### 3.3 Koleksi `menu` (Daftar Makanan & Minuman)
+### 3.3 Koleksi `menu` (Daftar Item Menu)
 ```json
 {
   "nama": "Bakso Spesial",
@@ -100,7 +99,7 @@ Aplikasi menggunakan database NoSQL **Cloud Firestore**. Berikut adalah struktur
 }
 ```
 
-### 3.4 Koleksi `pesanan` (Logika Transaksi Real-time)
+### 3.4 Koleksi `pesanan` (Log Transaksi Real-time)
 ```json
 {
   "pembeliId": "USER_ID_PEMBELI",
@@ -109,8 +108,8 @@ Aplikasi menggunakan database NoSQL **Cloud Firestore**. Berikut adalah struktur
   "kantinId": "kantin_4",
   "totalHarga": 32000,
   "noAntrian": 42,
-  "catatan": "Bakso Spesial tidak pakai daun seledri, kuah agak pedas",
-  "statusIndex": 0, // 0 = Antre, 1 = Diproses, 2 = Siap Diambil, 3 = Selesai, 4 = Dibatalkan
+  "catatan": "Tanpa daun seledri",
+  "statusIndex": 0,
   "metodePembayaran": "QRIS",
   "waktu": "Timestamp",
   "items": [
@@ -125,35 +124,38 @@ Aplikasi menggunakan database NoSQL **Cloud Firestore**. Berikut adalah struktur
 
 ---
 
-## 🛠️ BAB IV: FITUR UTAMA & VALIDASI TEKNIS
+## Bab IV: Implementasi Fitur Teknis
 
-### 4.1 Integrasi API Cuaca Kampus
-Menggunakan paket `http` untuk memanggil API Cuaca secara dinamis. Informasi cuaca (suhu, cuaca cerah/hujan) ditampilkan di beranda pembeli beserta rekomendasi makanan yang cerdas (misalnya: *"Cuaca sedang hujan dingin, sangat cocok menikmati Soto Ayam hangat!"*).
+### 4.1 Modul Cuaca Terintegrasi (Context-Aware Filter)
+Aplikasi memanggil data suhu dari API cuaca eksternal (Open-Meteo) berdasarkan titik koordinat daerah kampus. Fitur ini menyaring kategori makanan secara otomatis berdasarkan kondisi suhu udara (misalnya, merekomendasikan menu minuman dingin saat suhu terik, atau soto berkuah hangat saat cuaca dingin).
 
-### 4.2 Validasi Input & Keamanan Transaksi
-*   **Autentikasi Form:** Validasi email kampus asli (@kampus.ac.id), password tidak boleh di bawah 6 karakter, nama tidak boleh kosong.
-*   **CRUD Form Admin & Pedagang:** Validasi harga tidak boleh negatif, stok tidak boleh kosong, deskripsi menu wajib diisi.
+### 4.2 Perhitungan Waktu Antrean Dinamis (Dynamic Queue Estimator)
+Waktu tunggu pada beranda dihitung secara dinamis melalui penapisan jumlah antrean yang berstatus aktif (`statusIndex < 3`) di Firestore:
+* `0 pesanan aktif` -> 5-10 menit.
+* `1-2 pesanan aktif` -> 10-15 menit.
+* `>=3 pesanan aktif` -> 20-25 menit.
 
-### 4.3 Responsivitas Layout (Left Sidebar Widget)
-Aplikasi mendukung responsivitas penuh menggunakan `LayoutBuilder` dan `MediaQuery`. Saat dijalankan di tablet/PC, navigasi secara otomatis berubah menjadi **Left Collapsible Sidebar Widget** premium, sedangkan di smartphone berubah menjadi mobile bar bawah yang ringkas.
+### 4.3 Validasi Form Input
+Sistem memvalidasi setiap masukan pengguna guna meminimalkan kegagalan data:
+* Form login dan pendaftaran divalidasi menggunakan ekspresi reguler (Regex) untuk format email serta minimal panjang karakter sandi.
+* Form CRUD kantin/menu memvalidasi tipe data angka pada harga dan memastikan kolom wajib tidak kosong.
 
 ---
 
-## 🧪 BAB V: TESTING & IMPLEMENTASI QA
+## Bab V: Pengujian Sistem dan Implementasi QA
 
-### 5.1 Widget Testing
-Pengujian terautomasi diletakkan di berkas `test/widget_test.dart` untuk menguji rendering awal antarmuka Onboarding. Pengujian ini dapat dijalankan menggunakan perintah:
+### 5.1 Pengujian Terautomasi (Widget Testing)
+Pengujian otomatis dideklarasikan pada berkas `test/widget_test.dart` untuk memverifikasi fungsionalitas visual layar onboarding. Pengujian dapat dieksekusi dengan perintah:
 ```bash
 flutter test
 ```
-*Hasil pengujian: **100% Passed**.*
+Hasil pengujian menunjukkan status berhasil penuh tanpa adanya kegagalan program.
 
-### 5.2 Manual Testing & Uji Skenario
-*   **Uji Skenario 1 (Pemesanan Real-time):** Pembeli melakukan pemesanan $\rightarrow$ Status langsung muncul di Dashboard Pedagang dalam 0.5 detik $\rightarrow$ Perubahan status oleh pedagang langsung terupdate di layar pelacakan pembeli secara real-time.
-*   **Uji Skenario 2 (Auto-Seeder):** Saat database Firestore kosong, seeder secara dinamis membuat 8 kantin default dan menu makanannya secara rapi lengkap dengan gambar-gambarnya yang lezat tanpa perlu menginput manual.
+### 5.2 Pengujian Manual (Manual QA)
+Skenario pengujian manual mencakup integrasi pengiriman pesanan pembeli yang langsung terbaca pada dashboard pedagang dalam hitungan detik, serta kelancaran database seeder untuk menginisialisasi data kantin default ketika koleksi database terdeteksi kosong.
 
 ---
 
-## 📝 BAB VI: KESIMPULAN
+## Bab VI: Kesimpulan
 
-Aplikasi **FoodTrack** telah memenuhi 100% standar Skema A (1 Project Besar) mata kuliah Pemrograman Mobile. Aplikasi ini siap dirilis sebagai produk MVP (*Minimum Viable Product*) yang scalable, memiliki performa rendering yang sangat cepat berkat Provider, dan antarmuka premium terintegrasi Firebase secara real-time tanpa ada potensi crash.
+Aplikasi FoodTrack telah diimplementasikan sepenuhnya sesuai dengan ketentuan Skema A Pemrograman Mobile. Pemisahan komponen UI dengan business logic menggunakan State Management Provider serta pemanfaatan database real-time Cloud Firestore menghasilkan aplikasi mobile yang stabil, responsif, dan siap untuk digunakan dalam lingkungan kantin kampus.

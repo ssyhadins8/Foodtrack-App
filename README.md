@@ -1,193 +1,168 @@
-# 📱 FoodTrack - Smart Campus Canteen Mobile Application
+# FoodTrack - Sistem Pemesanan dan Manajemen Kantin Kampus
 
-> **Project Based Learning (PjBL) - Proyek UAS Pemrograman Mobile**  
-> **Skema A: 1 Project Besar (Minggu 4 – 16)**  
-> **Dosen Pengampu: Tim Dosen Pemrograman Mobile**
+Proyek ini merupakan implementasi aplikasi mobile berbasis Flutter dan Firebase yang dirancang untuk mendigitalisasi transaksi di lingkungan kantin kampus. Aplikasi ini mengusung metode pemesanan *Self-Pickup* guna meminimalkan antrean fisik pada stan kantin.
 
 ---
 
-## 🌟 Tentang FoodTrack
+## Deskripsi Sistem
 
-**FoodTrack** adalah aplikasi mobile inovatif berbasis **Flutter** dan **Firebase (Firestore & Auth)** yang dirancang untuk mendigitalisasi ekosistem kantin kampus. Aplikasi ini menyelesaikan antrean fisik yang panjang dengan memfasilitasi pemesanan makanan secara online dengan model **Self-Pickup (Ambil di Tempat)**. 
+FoodTrack membagi peran pengguna menjadi tiga kategori yang terintegrasi secara real-time melalui Firebase Cloud Firestore:
 
-Aplikasi ini mendukung **3 Peran Pengguna (Multi-Role)** secara dinamis yang terhubung langsung secara real-time:
-1. **Pembeli (Mahasiswa/Staff):** Mencari kantin, melihat menu real-time, memesan makanan, memilih pembayaran (QRIS/Cash), menulis catatan kustom ke penjual, dan melacak status pesanan secara real-time.
-2. **Pedagang (Merchant):** Menerima pesanan masuk secara real-time, memperbarui status pengerjaan makanan (Diproses -> Siap Diambil), dan memantau pesanan selesai.
-3. **Admin:** Mengelola database kantin secara global lewat **Dashboard CRUD Premium** (Tambah, Edit, Hapus kantin lengkap dengan form validation, kategori presets, dan filter pencarian real-time).
+1. **Pembeli (Mahasiswa/Staf):** Berfungsi untuk mencari kantin, memesan makanan/minuman, menentukan catatan pesanan, memilih metode pembayaran (Cash atau QRIS), serta melacak status pembuatan makanan secara real-time.
+2. **Pedagang (Merchant/Kantin):** Berfungsi sebagai panel kontrol dapur untuk menerima pesanan masuk secara real-time, mengubah status pesanan (Diproses, Siap Diambil, Selesai), dan mengelola menu kantin mereka secara mandiri.
+3. **Administrator (Admin):** Berfungsi untuk mengelola data kantin global (tambah, edit, dan hapus data kantin) serta memantau statistik aktivitas transaksi seluruh ekosistem kantin.
 
 ---
 
-## 📐 Arsitektur Sistem & Alur Kerja
+## Arsitektur Sistem dan Alur Kerja
 
-Aplikasi ini mengadopsi **Clean Architecture** yang terintegrasi secara real-time lewat Firebase Cloud Firestore Streams.
+Aplikasi ini menggunakan pola arsitektur yang terbagi atas presentation layer, state management, dan data service layer. Sinkronisasi data real-time ditangani melalui streams database Firestore.
 
-### 🔄 Multi-Role Transaction & Management Sequence
+### Diagram Alur Transaksi (Sequence Diagram)
 
-Diagram berikut menunjukkan bagaimana ketiga aktor (Pembeli, Pedagang, dan Admin) berinteraksi dengan database Firestore secara real-time:
+Berikut merupakan diagram alur transaksi interaksi antara Pembeli, Pedagang, dan Cloud Firestore:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Pembeli as 👤 Pembeli (Mahasiswa)
-    actor Pedagang as 👨‍🍳 Pedagang (Merchant)
-    actor Admin as 🔑 Admin Kantin
-    participant DB as 🔥 Cloud Firestore
+    actor Pembeli as Pembeli (Mahasiswa)
+    actor Pedagang as Pedagang (Merchant)
+    participant DB as Cloud Firestore
 
-    %% Alur Seeding Otomatis
-    Note over DB: Startup Pertama / Database Kosong
-    rect rgb(230, 245, 230)
-        Note right of DB: Seeding otomatis mempopulerkan<br/>8 Kantin Default & Menu Makanan
+    Note over DB: Inisialisasi Database Pertama Kali
+    rect rgb(240, 240, 240)
+        Note right of DB: Seeding otomatis memuat data<br/>kantin default dan menu makanan
     end
 
-    %% Alur CRUD Admin
-    rect rgb(240, 240, 255)
-        Admin->>DB: CRUD Kantin (Tambah/Edit/Hapus Kantin)
-        DB-->>Pembeli: Live Updates daftar kantin di Beranda
+    rect rgb(245, 245, 255)
+        Pembeli->>DB: Stream data kantin dan menu
+        Pembeli->>Pembeli: Menambahkan item ke keranjang (Provider)
+        Pembeli->>Pembeli: Checkout (Pilih metode bayar dan isi catatan)
+        Pembeli->>DB: Simpan pesanan baru ke koleksi 'pesanan'
     end
-
-    %% Alur Transaksi
-    Pembeli->>DB: Stream data Kantin & Menu dinamis
-    Pembeli->>Pembeli: Masukkan Item ke Keranjang Belanja
-    Pembeli->>Pembeli: Checkout (Pilih Bayar & Tulis Catatan)
-    Pembeli->>DB: Kirim Pesanan (Simpan ke koleksi 'pesanan')
     
-    rect rgb(255, 240, 240)
-        DB-->>Pedagang: Notifikasi Pesanan Baru (Stream Real-time)
-        Pedagang->>Pedagang: Mempersiapkan Makanan
-        Pedagang->>DB: Update Status ("Diproses" -> "Siap Diambil")
-        DB-->>Pembeli: Live Update status di layar Pelacakan
+    rect rgb(255, 245, 245)
+        DB-->>Pedagang: Notifikasi pesanan baru (Stream Listener)
+        Pedagang->>Pedagang: Mempersiapkan pesanan
+        Pedagang->>DB: Update status pesanan (Diproses -> Siap Diambil)
+        DB-->>Pembeli: Status terupdate pada layar pelacakan
     end
 
-    Pembeli->>Pedagang: Ambil makanan di counter kantin (Self-Pickup)
-    Pedagang->>DB: Selesaikan Pesanan (Status: "Selesai")
+    Pembeli->>Pedagang: Mengambil makanan di stan kantin (Self-Pickup)
+    Pedagang->>DB: Selesaikan transaksi (Status: Selesai)
 ```
 
 ---
 
-## 🛠️ Tech Stack & Library Utama
+## Teknologi dan Pustaka Utama
 
-Aplikasi dibangun menggunakan teknologi modern cross-platform:
-*   **Framework Utama:** [Flutter](https://flutter.dev/) (versi 3.x)
-*   **Bahasa Pemrograman:** Dart
-*   **State Management:** [Provider](https://pub.dev/packages/provider) (Arsitektur Reactive & Dekopling State Keranjang)
-*   **Autentikasi & Database:**
-    *   `firebase_core`: Inisialisasi SDK Firebase.
-    *   `firebase_auth`: Manajemen login, register, dan enkripsi session user aman.
-    *   `cloud_firestore`: Sinkronisasi database NoSQL real-time (Streams/Websockets) untuk daftar kantin, menu, transaksi, dan log pesanan.
-*   **Layanan Notifikasi:** `firebase_messaging` untuk push notification.
-*   **Aesthetics & Fonts:** Poppins (Google Fonts), HSL Vibrant Color Systems, Glassmorphism, Micro-Animations.
+* **Framework Utama:** Flutter (Dart SDK)
+* **State Management:** Provider (Manajemen state reaktif untuk keranjang belanja)
+* **Backend dan Autentikasi:**
+  * `firebase_core`: Inisialisasi SDK Firebase.
+  * `firebase_auth`: Manajemen pendaftaran dan masuk pengguna.
+  * `cloud_firestore`: Sinkronisasi database NoSQL real-time melalui websocket streams.
+* **Layanan Pendukung:** `http` (Integrasi API cuaca eksternal).
 
 ---
 
-## 📁 Struktur Folder Project (Clean Architecture)
+## Struktur Direktori Proyek
 
-Arsitektur aplikasi terbagi dengan rapi untuk memisahkan logika UI (Presentation), Model (Data), dan Service (Backend):
+Struktur folder di bawah direktori `lib/` disusun berdasarkan pemisahan tanggung jawab kode program:
 
 ```text
 foodtruck/
-├── android/                  # Konfigurasi native Android (Google Services SDK)
-├── images/                   # Asset gambar premium (Logo, Kantin presets, Banner)
+├── android/                  # Konfigurasi platform Android native
+├── assets/                   # Aset statis aplikasi
+├── images/                   # Berkas gambar ikon dan menu kantin
 ├── lib/                      # Kode sumber utama Flutter
-│   ├── services/             # Integrasi Firestore & Logika Database
-│   │   ├── firestore_service.dart  # CRUD Admin, Order Sync, Live Streams, & Seeder
-│   │   └── widget_support.dart     # Utility Styling untuk Helper UI
-│   ├── theme/                # Global Design Token (Aesthetic Green-Gold Theme)
-│   │   └── app_colors.dart         # Sistem Pewarnaan (Gradients, Glassmorphism)
-│   ├── pages/                # Layer Presentasi (Views & Screens)
-│   │   ├── admin/            # Fitur Admin
-│   │   │   └── home_admin_page.dart   # Dashboard Canteen CRUD Premium
-│   │   ├── pedagang/         # Fitur Pedagang
-│   │   │   └── home_pedagang_page.dart # Order Tracking Dashboard
-│   │   ├── cart_page.dart         # Keranjang Belanja & Perhitungan Pajak/Biaya
-│   │   ├── checkout_page.dart     # Form Checkout Premium (Self-Pickup & Pembayaran)
-│   │   ├── home.dart              # Beranda Pembeli dengan Live Kantin Streams
-│   │   ├── kantin_detail_page.dart # Layar Menu Dinamis Tersinkronisasi Firestore
-│   │   ├── status_pesanan_page.dart# Real-time Order Tracking Screen
-│   │   ├── login.dart             # Autentikasi Login (Validasi Input)
-│   │   ├── signup.dart            # Pendaftaran User Baru (Save role ke Firestore)
-│   │   ├── splash_page.dart       # Layar Animasi Logo & Auto-Login Session
-│   │   └── onboarding.dart        # Premium Onboarding Splash Screen
-│   ├── cart_provider.dart    # State Management Keranjang Belanja (Provider)
-│   ├── firebase_options.dart # Konfigurasi Auto-Generated Firebase
-│   └── main.dart             # Root App Entry-point & Route Mapping
-├── test/                     # Layer Automated Testing
-│   └── widget_test.dart      # Smoke Test Onboarding UI (100% Passed)
-└── pubspec.yaml              # Dependensi Project & Deklarasi Assets
+│   ├── services/             # Integrasi database dan API eksternal
+│   │   ├── firestore_service.dart  # Query Firestore, Auth Helper, dan Database Seeder
+│   │   └── queue_service.dart      # Penghitung antrean dinamis kantin
+│   ├── theme/                # Global Design Token
+│   │   └── app_colors.dart         # Sistem pewarnaan dan gradien antarmuka
+│   ├── pages/                # Lapisan antarmuka pengguna (Views)
+│   │   ├── admin/            # Halaman statistik dan manajemen kantin global
+│   │   │   └── home_admin_page.dart
+│   │   ├── pedagang/         # Panel pengelolaan pesanan dan promo merchant
+│   │   │   ├── home_pedagang_page.dart
+│   │   │   ├── menu_pedagang_page.dart
+│   │   │   ├── pedagang_promo_page.dart
+│   │   │   └── profil_pedagang_page.dart
+│   │   ├── user/             # Panel fitur pembeli
+│   │   │   ├── order_history_page.dart
+│   │   │   └── redeem_points_page.dart
+│   │   ├── cart_page.dart         # Halaman kalkulasi dan pengelolaan keranjang belanja
+│   │   ├── checkout_page.dart     # Halaman pembayaran dan pengiriman instruksi
+│   │   ├── home.dart              # Halaman beranda utama pembeli
+│   │   ├── kantin_detail_page.dart # Halaman daftar menu detail kantin
+│   │   ├── status_pesanan_page.dart# Halaman pelacakan status pesanan real-time
+│   │   ├── login.dart             # Halaman masuk pengguna
+│   │   ├── signup.dart            # Halaman daftar akun baru
+│   │   └── onboarding.dart        # Halaman onboarding pengguna baru
+│   ├── cart_provider.dart    # Kelas Provider untuk pengelolaan state keranjang
+│   ├── firebase_options.dart # Berkas konfigurasi penghubung Firebase
+│   └── main.dart             # Berkas masuk utama aplikasi (Entry Point)
+├── test/                     # Berkas pengujian unit/widget terautomasi
+└── pubspec.yaml              # Dependensi pustaka proyek Flutter
 ```
 
 ---
 
-## 🚀 Fitur Utama & Keunggulan Realistis
+## Fitur Teknis Utama
 
-Aplikasi ini didesain agar terasa seperti produk komersial nyata (**Premium & Production-Ready**) guna memenuhi nilai tertinggi dalam kriteria penilaian UAS:
+### 1. Inisialisasi Otomatis Database (Database Seeder)
+Aplikasi menyertakan mekanisme seeding otomatis di `firestore_service.dart`. Apabila koleksi `'kantin'` di database Firestore terdeteksi kosong saat pertama kali dijalankan, sistem akan mengisi data 8 kantin default beserta daftar menunya secara otomatis. Hal ini memudahkan pengujian sistem tanpa memerlukan entri data manual dari awal.
 
-### 1. Sistem Seeding Database Otomatis (Auto-Seeder)
-*   **Cara Kerja:** Saat aplikasi dijalankan pertama kali (`main.dart`), seeder di `firestore_service.dart` akan mendeteksi apakah koleksi `'kantin'` di Cloud Firestore kosong.
-*   **Hasil:** Jika kosong, seeder secara otomatis membuat **8 data kantin mahasiswa** secara lengkap (dilengkapi dengan nama, kategori makanan, rating bintang, jam operasional, dan asset ikon gambar yang menawan) beserta **puluhan menu makanan & minuman** yang cocok untuk masing-masing kantin secara otomatis di Firestore. Anda tidak perlu menginput data manual untuk demonstrasi aplikasi di depan dosen!
+### 2. Estimasi Waktu Tunggu Dinamis (Dynamic Queue Estimator)
+Waktu tunggu pemesanan dihitung secara dinamis di `queue_service.dart` dengan melacak jumlah pesanan aktif yang sedang diproses di dapur (`statusIndex < 3`):
+* `0 pesanan aktif` -> Waktu tunggu: 5-10 menit.
+* `1-2 pesanan aktif` -> Waktu tunggu: 10-15 menit.
+* `>=3 pesanan aktif` -> Waktu tunggu: 20-25 menit.
 
-### 2. Beranda & Menu Dinamis (Real-Time Streams)
-*   **Beranda Pembeli:** Menggunakan `StreamBuilder` untuk memantau data kantin langsung dari Firestore. Setiap kali Admin memodifikasi kantin, daftar beranda pembeli langsung terupdate tanpa perlu reload aplikasi.
-*   **Kantin Detail:** Menu makanan ditarik secara dinamis berdasarkan `kantinId` yang diklik. Menghilangkan ratusan baris data hardcoded menjadi query database yang bersih dan modular.
+### 3. Filter Kontekstual Berbasis Cuaca (Weather API Integration)
+Aplikasi menggunakan data dari API cuaca eksternal untuk mendeteksi suhu di koordinat daerah kampus. Pengguna dapat menyaring kategori menu makanan secara otomatis yang disesuaikan dengan kondisi cuaca (contoh: menyarankan makanan hangat seperti soto ketika cuaca dingin/hujan).
 
-### 3. Layar Checkout Premium (Self-Pickup Model)
-*   **Self-Pickup Banner:** Memberi tahu pembeli dengan jelas bahwa pesanan ini bertipe *Self-Pickup* (Ambil langsung di kantin setelah matang) karena tidak ada kurir pengantaran.
-*   **Interactive Payment Selector:** Chip interaktif untuk memilih metode pembayaran **Tunai** atau **QRIS Dinamis**.
-*   **Catatan Kustom Penjual:** Pembeli dapat menulis instruksi khusus (contoh: *"Level 5, sendok garpu tidak perlu, kecap agak banyak"*). Catatan ini disimpan langsung di pesanan dan terbaca secara real-time oleh Pedagang.
-*   **Billing Breakdown:** Rincian biaya subtotal, biaya layanan aplikasi (Platform Fee), pajak, hingga total pembayaran akhir yang akurat.
-*   **Premium Success Dialog:** Transisi mulus yang menampilkan popup nomor antrean unik beserta tombol navigasi instan untuk melacak status pesanan secara interaktif.
-
-### 4. Dashboard CRUD Kantin Admin Premium
-*   **Search & Filter:** Admin dapat memfilter daftar kantin secara real-time melalui kolom pencarian dinamis.
-*   **CRUD Komplit:** Menambah atau mengedit nama, deskripsi, kategori, jam buka/tutup, rating bintang, dan memilih asset gambar ikon kantin menggunakan dropdown menu visual.
-*   **Form Validation & Feedback:** Validasi input ketat (mencegah field kosong) disertai konfirmasi popup dialog sebelum menghapus kantin demi menghindari kesalahan klik data.
+### 4. Pelacakan Transaksi Real-Time
+Status pesanan dihubungkan langsung dari panel pedagang ke layar pembeli menggunakan Firestore Streams. Setiap perubahan status pengerjaan yang dilakukan pedagang akan langsung tecermin di layar pembeli dalam hitungan milidetik secara reaktif.
 
 ---
 
-## 💻 Panduan Menjalankan Project
+## Panduan Instalasi dan Menjalankan Proyek
 
 ### Prasyarat
-1.  [Flutter SDK](https://docs.flutter.dev/get-started/install) telah terinstal di komputer Anda (versi 3.0.0 atau lebih tinggi).
-2.  Android Emulator atau Real Device yang terhubung melalui USB debugging.
-3.  Koneksi internet aktif (untuk koneksi Cloud Firestore).
+1. Flutter SDK versi stabil terbaru telah terpasang di komputer Anda.
+2. Emulator Android atau perangkat fisik Android yang terhubung melalui USB Debugging.
+3. Koneksi internet aktif untuk sinkronisasi database Firestore.
 
 ### Langkah Instalasi
-1.  **Clone / Buka Folder Project:**
-    Buka terminal dan navigasikan ke direktori project:
-    ```bash
-    cd C:\FoodTrack\foodtruck
-    ```
-
-2.  **Dapatkan Dependensi:**
-    Unduh semua paket pub yang dideklarasikan di `pubspec.yaml`:
-    ```bash
-    flutter pub get
-    ```
-
-3.  **Setup Firebase (Opsional jika ingin mengganti database):**
-    Project ini sudah dilengkapi berkas `firebase_options.dart` bawaan. Jika Anda ingin menyambungkannya ke proyek Firebase Anda sendiri, jalankan perintah:
-    ```bash
-    flutterfire configure
-    ```
-
-4.  **Jalankan Aplikasi:**
-    Jalankan server pengembangan lokal dan build aplikasi pada emulator/device:
-    ```bash
-    flutter run
-    ```
-    *Catatan: Pada startup pertama kali, sistem Auto-Seeding akan otomatis menyuntikkan data kantin default ke Firebase Firestore Anda.*
+1. Buka direktori proyek melalui terminal:
+   ```bash
+   cd C:\FoodTrack\foodtruck
+   ```
+2. Unduh semua paket dependensi yang terdaftar di `pubspec.yaml`:
+   ```bash
+   flutter pub get
+   ```
+3. Hubungkan proyek dengan Firebase Anda (opsional jika ingin mengganti instance database):
+   ```bash
+   flutterfire configure
+   ```
+4. Jalankan aplikasi pada perangkat yang terhubung:
+   ```bash
+   flutter run
+   ```
 
 ---
 
-## 🧪 Verifikasi & Unit Testing
+## Pengujian Terautomasi (Widget Testing)
 
-Aplikasi ini dilengkapi dengan rangkaian pengujian widget terautomasi (`Widget Testing`) untuk memastikan stabilitas antarmuka pengguna tanpa memicu bug dependensi Firebase.
-
-Untuk menjalankan pengujian, eksekusi perintah berikut di terminal:
+Pengujian fungsionalitas UI onboarding dideklarasikan pada berkas `test/widget_test.dart`. Jalankan pengujian melalui perintah berikut:
 ```bash
 flutter test
 ```
 
-**Hasil Pengujian:**
+Hasil pengujian yang berhasil:
 ```text
 00:00 +0: loading C:/FoodTrack/foodtruck/test/widget_test.dart
 00:00 +0: OnboardingPage renders premium UI successfully
@@ -196,18 +171,14 @@ flutter test
 
 ---
 
-## 👨‍🎓 Penyelarasan Kriteria UAS (Evaluasi Mandiri)
+## Kesesuaian Kriteria Penilaian Evaluasi Akhir
 
-| Kriteria Kebutuhan UAS | Status Implementasi pada FoodTrack | Lokasi Kode Sumber |
+| Kriteria Persyaratan | Implementasi Sistem | Berkas Terkait |
 |---|---|---|
-| **Sistem Autentikasi** | ✅ **Selesai** (Enkripsi Firebase Auth, Register user baru, Login & simpan session agar tidak perlu re-login terus-menerus). | `lib/pages/login.dart`, `lib/pages/signup.dart`, `lib/pages/splash_page.dart` |
-| **Minimal 3 Fitur Utama** | ✅ **Selesai** (Fitur Pembeli/Pesan, Fitur Pedagang/Proses Pesanan, Fitur Admin/CRUD Kantin global). | `lib/pages/` (Lengkap) |
-| **CRUD Data** | ✅ **Selesai** (Admin CRUD Kantin lengkap, sync real-time ke Firestore). | `lib/pages/admin/home_admin_page.dart`, `lib/services/firestore_service.dart` |
-| **Validasi Input** | ✅ **Selesai** (Validasi ketat pada form pendaftaran, login, checkout catatan, dan form CRUD Kantin Admin). | `lib/pages/` (Form fields & validators) |
-| **Navigasi Multi-Screen** | ✅ **Selesai** (Menggunakan Dynamic Route Navigation & Named Routes). | `lib/main.dart` |
-| **Penyimpanan Data** | ✅ **Selesai** (Penyimpanan tersentralisasi di Cloud Firestore NoSQL DB). | `lib/services/firestore_service.dart` |
-| **Arsitektur Bersih** | ✅ **Selesai** (Pemisahan Business Logic Provider, Views, dan Firestore Service APIs). | `lib/` (Lengkap) |
-
----
-
-> 🚀 **FoodTrack siap dipresentasikan!** Seluruh kode telah dirancang memenuhi standar aplikasi komersial berpenampilan premium, berkinerja responsif, dan siap menyabet nilai **A** dalam proyek Pemrograman Mobile Anda!
+| **Sistem Autentikasi** | Tersedia login, registrasi akun baru, dan auto-login session berbasis Firebase Auth. | `lib/pages/login.dart`, `lib/pages/signup.dart` |
+| **Multi-Role User** | Pembeli (Mahasiswa), Pedagang (Kantin), dan Administrator. | `lib/pages/` (Direktori admin & pedagang) |
+| **Penyimpanan Data** | Menggunakan Cloud Firestore NoSQL Database untuk sinkronisasi data global. | `lib/services/firestore_service.dart` |
+| **Fungsi CRUD** | Pengelolaan data kantin global oleh Admin dan pengelolaan menu makanan oleh Pedagang. | `lib/pages/admin/home_admin_page.dart`, `lib/pages/pedagang/menu_pedagang_page.dart` |
+| **Validasi Input** | Pemeriksaan kesesuaian input form pada pendaftaran, login, dan form entri data CRUD. | `lib/pages/` (Form validation & error messaging) |
+| **Navigasi Layar** | Navigasi dinamis antar halaman menggunakan Route Name. | `lib/main.dart` |
+| **State Management** | Pengelolaan keranjang belanja terpusat secara reaktif. | `lib/cart_provider.dart` |

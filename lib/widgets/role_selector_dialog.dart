@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:foodtrack/theme/app_colors.dart';
 
 class RoleSelectorDialog extends StatelessWidget {
   const RoleSelectorDialog({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    String _selected = 'pembeli';
+    String selected = 'pembeli';
     return AlertDialog(
       title: const Text('Pilih Peran'),
       content: StatefulBuilder(
@@ -17,20 +16,20 @@ class RoleSelectorDialog extends StatelessWidget {
               RadioListTile<String>(
                 title: const Text('🛒 Pembeli'),
                 value: 'pembeli',
-                groupValue: _selected,
-                onChanged: (v) => setState(() => _selected = v!),
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
                 title: const Text('🏪 Pedagang'),
                 value: 'pedagang',
-                groupValue: _selected,
-                onChanged: (v) => setState(() => _selected = v!),
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
               ),
               RadioListTile<String>(
                 title: const Text('🔑 Admin'),
                 value: 'admin',
-                groupValue: _selected,
-                onChanged: (v) => setState(() => _selected = v!),
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
               ),
             ],
           );
@@ -42,7 +41,7 @@ class RoleSelectorDialog extends StatelessWidget {
           child: const Text('Batal'),
         ),
         ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(_selected),
+          onPressed: () => Navigator.of(context).pop(selected),
           child: const Text('Lanjut'),
         ),
       ],

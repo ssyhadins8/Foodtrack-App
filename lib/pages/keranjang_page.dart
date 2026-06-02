@@ -55,16 +55,14 @@ class KeranjangPage extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFF2E7D52,
-                          ).withValues(alpha: 0.12),
+                          color: const Color(0xFF3D5A80).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           '${cart.totalItem} item',
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF2E7D52),
+                            color: Color(0xFF3D5A80),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -105,7 +103,7 @@ class KeranjangPage extends StatelessWidget {
                             const SizedBox(height: 24),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E7D52),
+                                backgroundColor: const Color(0xFF3D5A80),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 24,
                                   vertical: 12,
@@ -160,8 +158,8 @@ class KeranjangPage extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         gradient: const LinearGradient(
                                           colors: [
-                                            Color(0xFF2E9E75),
-                                            Color(0xFF2E7D52),
+                                            Color(0xFF3D5A80),
+                                            Color(0xFF3D5A80),
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(12),
@@ -201,7 +199,7 @@ class KeranjangPage extends StatelessWidget {
                                         _formatHarga(item.harga),
                                         style: const TextStyle(
                                           fontSize: 13,
-                                          color: Color(0xFF2E9E75),
+                                          color: Color(0xFF3D5A80),
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -247,7 +245,7 @@ class KeranjangPage extends StatelessWidget {
                                             width: 28,
                                             height: 28,
                                             decoration: const BoxDecoration(
-                                              color: Color(0xFF2E9E75),
+                                              color: Color(0xFF3D5A80),
                                               shape: BoxShape.circle,
                                             ),
                                             child: const Icon(
@@ -324,7 +322,7 @@ class KeranjangPage extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D52),
+                        backgroundColor: const Color(0xFF3D5A80),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),

@@ -17,6 +17,7 @@ import 'package:foodtrack/pages/admin/home_admin_page.dart';
 import 'package:foodtrack/pages/status_pesanan_page.dart'; // ✅ Fix 12: tambah import
 import 'package:foodtrack/pages/checkout_page.dart'; // ✅ Add checkout page import
 import 'package:foodtrack/services/firestore_service.dart'; // ✅ Add firestore service import
+import 'package:foodtrack/services/notification_service.dart'; // ✅ Add notification service import
 
 import 'package:foodtrack/theme/app_colors.dart';
 import 'package:foodtrack/theme/app_typography.dart';
@@ -29,8 +30,15 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   
+  // ✅ Initialize local notifications
+  await NotificationService.init();
+  
   // ✅ Seed canteens & menus if database is empty
   await FirestoreService.seedInitialData();
+  // ✅ Patch foodcourt labels & add new kantins (runs once)
+  await FirestoreService.seedNewFoodcourtBaru();
+  // ✅ Add Toby's Chicken (runs once)
+  await FirestoreService.seedTobyChicken();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

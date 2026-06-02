@@ -49,7 +49,83 @@ class StatusPesananPage extends StatelessWidget {
           }
 
           if (!snap.hasData || !snap.data!.exists) {
-            return const Center(child: Text('Data tidak ditemukan'));
+            return Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              body: Center(
+                child: Container(
+                  margin: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(24),
+                  decoration: AppColors.premiumCardDeco(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.95),
+                    borderRadius: 24,
+                  ).copyWith(
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.receipt_long_rounded,
+                          color: Colors.red,
+                          size: 48,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Pesanan Tidak Ditemukan',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Maaf, detail pesanan ini tidak dapat ditemukan. Kemungkinan pesanan telah dihapus atau diarsipkan oleh sistem saat migrasi database.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white70,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Kembali',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
           }
 
           final data = snap.data!.data() as Map<String, dynamic>;
@@ -58,8 +134,7 @@ class StatusPesananPage extends StatelessWidget {
           final kantin = data['kantin'] ?? '-';
           final metode = data['metode'] ?? '-';
           final totalHarga = data['totalHarga'] as int? ?? 0;
-          final items =
-              (data['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+          final items = (data['items'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map<String, dynamic>)).toList() ?? [];
           final waktu =
               (data['waktuPesan'] as Timestamp?)?.toDate() ?? DateTime.now();
 
@@ -68,7 +143,7 @@ class StatusPesananPage extends StatelessWidget {
               // App Bar
               SliverAppBar(
                 pinned: true,
-                expandedHeight: 200,
+                expandedHeight: 220,
                 backgroundColor: AppColors.primary,
                 leading: GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -97,7 +172,7 @@ class StatusPesananPage extends StatelessWidget {
                     ),
                     child: SafeArea(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -118,11 +193,11 @@ class StatusPesananPage extends StatelessWidget {
                                         fontWeight: FontWeight.w900)),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             const Text('No. Antrian',
                                 style: TextStyle(
                                     color: Colors.white70, fontSize: 12)),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Text(kantin,
                                 style: const TextStyle(
                                     color: Colors.white,

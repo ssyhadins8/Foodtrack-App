@@ -5,6 +5,7 @@ import 'package:foodtrack/cart_provider.dart';
 import 'package:foodtrack/theme/app_colors.dart';
 import 'package:foodtrack/pages/cart_page.dart';
 import 'package:foodtrack/services/firestore_service.dart';
+import 'dart:async';
 
 class KantinDetailPage extends StatefulWidget {
   final Map<String, dynamic> kantin;
@@ -20,6 +21,8 @@ class _KantinDetailPageState extends State<KantinDetailPage> {
 
   List<Map<String, dynamic>> _menuFromFirestore = [];
   bool _isLoadingMenu = true;
+  StreamSubscription<QuerySnapshot>? _menuSub;
+  Timer? _menuTimeoutTimer;
 
   @override
   void initState() {
@@ -27,14 +30,30 @@ class _KantinDetailPageState extends State<KantinDetailPage> {
     _loadMenus();
   }
 
+  @override
+  void dispose() {
+    _menuSub?.cancel();
+    _menuTimeoutTimer?.cancel();
+    super.dispose();
+  }
+
   void _loadMenus() {
     final kantinId = widget.kantin['id'] as String;
-    FirebaseFirestore.instance
+    _menuTimeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted && _isLoadingMenu) {
+        setState(() {
+          _isLoadingMenu = false;
+        });
+      }
+    });
+
+    _menuSub = FirebaseFirestore.instance
         .collection('menu')
         .where('kantinId', isEqualTo: kantinId)
         .snapshots()
         .listen((snapshot) {
       if (mounted) {
+        _menuTimeoutTimer?.cancel();
         setState(() {
           _menuFromFirestore = snapshot.docs.map((doc) {
             final data = doc.data();
@@ -417,7 +436,7 @@ class _KantinDetailPageState extends State<KantinDetailPage> {
                           child: Center(
                             child: Padding(
                               padding: EdgeInsets.symmetric(vertical: 80),
-                              child: Text('Menu tidak tersedia',
+                              child: Text('Belum ada menu tersedia',
                                   style: TextStyle(color: Colors.grey)),
                             ),
                           ),
@@ -455,21 +474,37 @@ class _KantinDetailPageState extends State<KantinDetailPage> {
                                           const BorderRadius.horizontal(
                                         left: Radius.circular(16),
                                       ),
-                                      child: Image.asset(
-                                        menu['gambar'],
-                                        width: 90,
-                                        height: 90,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          width: 90,
-                                          height: 90,
-                                          color: AppColors.cyanLight,
-                                          child: const Icon(
-                                            Icons.fastfood_rounded,
-                                            color: AppColors.secondary,
-                                          ),
-                                        ),
-                                      ),
+                                      child: (() {
+                                        final String gambarPath = menu['gambar'] as String? ?? '';
+                                        final isNetwork = gambarPath.startsWith('http://') || gambarPath.startsWith('https://');
+                                        if (isNetwork) {
+                                          return Image.network(
+                                            gambarPath,
+                                            width: 90,
+                                            height: 90,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stack) => Container(
+                                              width: 90,
+                                              height: 90,
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.restaurant, color: Colors.grey),
+                                            ),
+                                          );
+                                        } else {
+                                          return Image.asset(
+                                            gambarPath,
+                                            width: 90,
+                                            height: 90,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stack) => Container(
+                                              width: 90,
+                                              height: 90,
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.restaurant, color: Colors.grey),
+                                            ),
+                                          );
+                                        }
+                                      }()),
                                     ),
                                     Expanded(
                                       child: Padding(

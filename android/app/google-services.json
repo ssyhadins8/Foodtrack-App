@@ -12,7 +12,12 @@
           "package_name": "com.example.foodtrack"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "210926790058-4lqgg0jlo8sfiroj1ga8ldh6t5iqp0j0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDKcukj2a22dqINETCBLLIhxVsUJSwlRlg"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "210926790058-4lqgg0jlo8sfiroj1ga8ldh6t5iqp0j0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

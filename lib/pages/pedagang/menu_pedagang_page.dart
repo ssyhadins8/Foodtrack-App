@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:foodtrack/theme/app_colors.dart';
 import 'package:foodtrack/theme/premium_background.dart';
+import 'package:foodtrack/services/menu_service.dart';
 
 class MenuPedagangPage extends StatefulWidget {
   final String namaKantin, kantinId;
@@ -500,14 +501,34 @@ class _MenuPedagangPageState extends State<MenuPedagangPage> {
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                 ),
-                                child: Text(
-                                  '$stok',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
+                                child: stok <= 3
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.warning,
+                                            color: Colors.red,
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            '$stok',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Text(
+                                        '$stok',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
                               ),
                               GestureDetector(
                                 onTap: () async {
@@ -528,6 +549,18 @@ class _MenuPedagangPageState extends State<MenuPedagangPage> {
                             ],
                           ),
                         ],
+                      ),
+
+                      Switch(
+                        value: data['isAvailable'] as bool? ?? false,
+                        onChanged: (val) async {
+                          await FirebaseFirestore.instance
+                              .collection('menu')
+                              .doc(docId)
+                              .update({'isAvailable': val});
+                        },
+                        activeColor: AppColors.cyan,
+                        activeTrackColor: AppColors.primary,
                       ),
 
                       // Edit button
