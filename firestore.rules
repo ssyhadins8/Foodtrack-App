@@ -1,22 +1,64 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // users collection – only owner can read/write
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    // helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+
+    // helper function to check if user is admin or pedagang
+    function isAdminOrPedagang() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'pedagang'];
+    }
+
+    // users collection – owner can read/write, admin can read/write
+    match /users/{uid} {
+      allow read, write: if request.auth != null && (request.auth.uid == uid || isAdmin());
+    }
+    
     // kantin collection – all can read, only admin can write
     match /kantin/{kantinId} {
       allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if isAdmin();
     }
-    // pesanan collection – user can create own order; admin/pedagang can read/write
+    
+    // menu collection – all can read, admin & pedagang can write
+    match /menu/{menuId} {
+      allow read: if true;
+      allow write: if isAdminOrPedagang();
+    }
+    
+    // pesanan collection – user can read/create/write own order; admin/pedagang can read/write
     match /pesanan/{orderId} {
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      allow read: if request.auth != null && (resource.data.uid == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'pedagang']);
-      allow update, delete: if request.auth != null && (resource.data.uid == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'pedagang']);
+      allow read: if request.auth != null && (resource.data.uid == request.auth.uid || isAdminOrPedagang());
+      allow update, delete: if request.auth != null && (resource.data.uid == request.auth.uid || isAdminOrPedagang());
     }
-    // default deny
-    match /{document=**} { allow read, write: if false; }
+
+    // notifikasi collection – authenticated users can read/write
+    match /notifikasi/{notifId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // favorites collection – authenticated users can read/write
+    match /favorites/{favId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ulasan collection – all can read, authenticated can write
+    match /ulasan/{ulasanId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // vouchers collection – authenticated users can read/write
+    match /vouchers/{voucherId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // default deny for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
